@@ -2,102 +2,145 @@
 nextflow.enable.dsl = 2
 
 // Inputs
-vcf_first = create_input_vcf_channel('first', 'data/gs_one.vcf.gz')
-vcf_two = create_input_vcf_channel('second', 'data/gs_two.vcf.gz')
-vcfs = Channel.empty().mix(vcf_first, vcf_two)
-
-// Helper functions
-def create_input_vcf_channel(vcf_position, filepath) {
-  return Channel.fromPath(filepath)
-    .map { [vcf_position, it.getSimpleName(), it] }
-}
-
-// NOTE: we could include indices here as well
-def arrange_channel(channel) {
-  channel.toList().map { d ->
-    // This should be done cleanly in a single loop
-    // Clearly define case and limits thereof
-    first_index = d.collect { it[0] }.indexOf('first')
-    second_index = (first_index == 0) ? 1 : 0
-    // Assertion here
-    [
-      d[first_index][1], // first sample_name
-      d[second_index][1], // second sample_name
-      d[first_index][2], // first vcf
-      d[second_index][2], // second vcf
-    ]
-  }
-}
+ch_vcf_one = file('data/gs_one.vcf.gz')
+ch_vcf_two = file('data/gs_two.vcf.gz')
+ch_vcfs_input = Channel.fromList([
+  ['one', ch_vcf_one],
+  ['two', ch_vcf_two],
+])
 
 // Processes
 process variants_pass {
   publishDir "${params.output_dir}/1_variants_pass/"
 
+  container 'quay.io/biocontainers/bcftools'
+
   input:
-  tuple val(vcf_position), val(sample_name), path(vcf)
+  tuple val(vcf_position), path(vcf)
 
   output:
-  tuple val(vcf_position), val("${sample_name}_pass"), path('*.vcf')
+  tuple val(vcf_position), path('*.vcf.gz')
 
   script:
+  def sample_name = vcf.getSimpleName()
   """
   {
     bcftools view -h "${vcf}";
     bcftools view -Hf .,PASS "${vcf}" | sort -k1,1V -k2,2n;
   } | \
     bcftools view -Oz \
-    > "${sample_name}_pass.vcf"
+    > "${sample_name}_pass.vcf.gz"
+  """
+}
+
+process index_vcf {
+  container 'quay.io/biocontainers/bcftools'
+
+  input:
+  tuple val(vcf_type), val(vcf_position), path(vcf)
+
+  output:
+  tuple val(vcf_type), val(vcf_position), path('*.tbi')
+
+  script:
+  """
+  tabix "${vcf}"
   """
 }
 
 process variants_intersect {
   publishDir "${params.output_dir}/2_variants_intersect/${sample_name}"
 
+  container 'quay.io/biocontainers/bcftools'
+
   input:
-  tuple val(sname_one), val(sname_two), path(vcf_one), path(vcf_two)
+  tuple val(vcf_type), path(vcf_one), path(index_one), path(vcf_two), path(index_two)
 
   output:
-  tuple val(sample_name), path('*vcf')
+  tuple val(vcf_type), val(sample_name), path('*vcf')
 
   script:
-  sample_name = "${sname_one}__${sname_two}"
+  sample_name = "intersect__${vcf_one.getSimpleName()}__${vcf_two.getSimpleName()}"
   """
-  tabix "${vcf_one}"
-  tabix "${vcf_two}"
   bcftools isec "${vcf_one}" "${vcf_two}" -p ./
+  """
+}
+
+process count_variants {
+  publishDir "${params.output_dir}/3_variant_counts/${subdir}"
+
+  container 'public.ecr.aws/amazonlinux/amazonlinux:latest'
+
+  input:
+  tuple val(subdir), path(vcf)
+
+  output:
+  path('*tsv')
+
+  script:
+  """
+  variant_count=\$(gzip -cd "${vcf}" | sed '/^##/d' | wc -l)
+  echo -e "${vcf.getSimpleName()}\t\${variant_count}" > "${vcf.getSimpleName()}.tsv"
   """
 }
 
 // Workflow
 workflow {
   // Filter variants
-  vcfs_pass = variants_pass(vcfs)
+  ch_vcfs_pass = variants_pass(ch_vcfs_input)
 
-  vcfs_pass.toList().view()
-  vcfs.toList().view()
+  // Tag inputs to track and re-pair downstream
+  ch_vcfs = Channel.empty().mix(
+    Channel.value('pass').combine(ch_vcfs_pass),
+    Channel.value('input').combine(ch_vcfs_input)
+  )
 
-  // NOTE: here is an appropriate point to index vcfs
-  // This means we would be at:
-  //   [vcf_position, sample_name, vcf, vcf_index]
-  //
-  // And the arrange_channe function needs to be modified to:
-  //  d[first_index][1], // first sample_name
-  //  d[second_index][1], // second sample_name
-  //  d[first_index][2], // first vcf
-  //  d[first_index][3], // first vcf (index_
-  //  d[second_index][2], // second vcf
-  //  d[second_index][3], // second vcf (index)
-  //
-  // Following, the input for variants_intersect needs to be updated as well
+  // Index
+  ch_vcfs_indices = index_vcf(ch_vcfs)
 
-  // Now arrange
-  vcfs_squashed = arrange_channel(vcfs)
-  vcfs_pass_squashed = arrange_channel(vcfs_pass)
-  vcfs_all_squashed = Channel.empty().mix(vcfs_squashed, vcfs_pass_squashed)
+  // Pair and sort VCFs and corresponding indices
+  ch_vcfs_indexed = ch_vcfs
+    .join(ch_vcfs_indices, by: [0, 1])
+    .toList()
+    .flatMap { d ->
+      // Output channel to contain:
+      //   ['input', vcf_input_one, index_input_one, vcf_input_two, index_input_two]
+      //   ['pass', vcf_pass_one, index_pass_one, vcf_pass_two, index_pass_two]
+      input = []
+      pass = []
+      d.collect { dd ->
+        // Determine position in input/pass array: vcf_one is first, vcf_two is second
+        if (dd[1] == 'one') {
+          position = 0
+        } else if (dd[1] == 'two') {
+          position = 1
+        } else {
+          // TODO: assertion
+        }
+        // Insert into correct array at the appropriate position
+        if (dd[0]=='input') {
+          input[position] = dd[2..-1]
+        } else if (dd[0]=='pass') {
+          pass[position] = dd[2..-1]
+        } else {
+          // TODO: assertion
+        }
+      }
+      return [
+        ['input', *input.flatten()],
+        ['pass', *pass.flatten()]
+      ]
+    }
 
-  vcfs_all_squashed.toList().view()
+  // Intersect
+  ch_vcfs_intersects = variants_intersect(ch_vcfs_indexed)
 
-  vcfs_all_intersect = variants_intersect(vcfs_all_squashed)
-
-  // Count number of variants(?) in vcfs (input, pass, intersect)
+  // Variant counts
+  ch_vcfs_to_count = Channel.empty().mix(
+    ch_vcfs.map { [it[0], it[2]] },
+    ch_vcfs_intersects.flatMap { d ->
+      d[2].collect { dd -> ["${d[0]}_intersect", dd] }
+    }
+  )
+  count_variants(ch_vcfs_to_count)
 }
