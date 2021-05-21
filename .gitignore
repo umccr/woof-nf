@@ -1,0 +1,5 @@
+.nextflow*
+conda_env/
+data/
+output/
+work/
