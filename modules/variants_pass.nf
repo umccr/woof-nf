@@ -4,12 +4,15 @@ process module_variants_pass {
   container 'quay.io/biocontainers/bcftools'
 
   input:
-  tuple val(vcf_position), path(vcf)
+  tuple val(vcf_type), val(flags_in), path(vcf)
 
   output:
-  tuple val(vcf_position), path('*.vcf.gz')
+  tuple val(vcf_type), val(flags_out), path('*.vcf.gz')
 
   script:
+  // Unset has_index and set not input flag
+  flags_out = (flags_in & ~0b0100)
+  flags_out = (flags_out ^ 0b0001)
   def sample_name = vcf.getSimpleName()
   """
   {
