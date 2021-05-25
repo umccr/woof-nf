@@ -12,8 +12,13 @@ process module_count_variants {
   uuid = UUID.randomUUID().toString()
   filename = "${uuid}.tsv"
   """
-  echo $task
-  variant_count=\$(gzip -cd "${vcf}" | sed '/^##/d' | wc -l)
+  # Check for gzip magic bits
+  magic_bits=\$(hexdump -n2 -e '2/1 "%02x" "\n"' ${vcf})
+  if [[ "\${magic_bits}" == "1f8b" ]]; then
+    variant_count=\$(gzip -cd "${vcf}" | sed '/^#/d' | wc -l)
+  else
+    variant_count=\$(sed '/^#/d' "${vcf}" | wc -l)
+  fi;
   echo -e "${vcf_type}\t${vcf.getSimpleName()}\t${source}\t\${variant_count}" > "${filename}"
   """
 }
