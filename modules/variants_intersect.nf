@@ -1,17 +1,17 @@
 process module_variants_intersect {
-  publishDir "${params.output_dir}/2_variants_intersect/${sample_name}"
+  publishDir "${params.output_dir}/2_variants_intersect/${source}/${vcf_type}"
 
   container 'quay.io/biocontainers/bcftools'
 
   input:
-  tuple val(vcf_type), path(vcf_one), path(index_one), path(vcf_two), path(index_two)
+  tuple val(vcf_type), val(flags), path('1.vcf.gz'), path('1.vcf.gz.tbi'), path('2.vcf.gz'), path('2.vcf.gz.tbi')
 
   output:
-  tuple val(vcf_type), val(sample_name), path('*vcf')
+  tuple val(vcf_type), val(flags), path('*vcf')
 
   script:
-  sample_name = "intersect__${vcf_one.getSimpleName()}__${vcf_two.getSimpleName()}"
+  source = (flags & 0b0001) ? 'filtered' : 'input'
   """
-  bcftools isec "${vcf_one}" "${vcf_two}" -p ./
+  bcftools isec 1.vcf.gz 2.vcf.gz -p ./
   """
 }

@@ -5,7 +5,7 @@ workflow workflow_compare_vcfs {
   take: ch_vcfs
   main:
   // Intersect
-  ch_vcfs_intersects = module_variants_intersect(ch_vcfs_indexed)
+  ch_vcfs_intersects = module_variants_intersect(ch_vcfs)
 
   // Variant counts
   ch_vcfs_to_count = Channel.empty().mix(

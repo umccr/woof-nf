@@ -1,10 +1,17 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
+// Import modules
+include { module_combine_counts } from './modules/combine_counts.nf'
+include { module_count_variants } from './modules/count_variants.nf'
+include { module_index_vcf } from './modules/index_vcf.nf'
+include { module_variants_intersect } from './modules/variants_intersect.nf'
 include { module_variants_pass } from './modules/variants_pass.nf'
-include { workflow_compare_vcfs } from './workflows/vcf_comparison.nf'
 
-// Inputs
+// Import utilities
+include { pair_vcfs_and_indices } from './lib/utility.groovy'
+
+// Set inputs
 run_dir_one = file('data/1.1.3/CUP-Pairs8/CUP-Pairs8__PRJ180660_8_DNA009529_FFPE/')
 run_dir_two = file('data/1.1.0-rc.8-d6558f5734/CUP-Pairs8/CUP-Pairs8__PRJ180660_8_DNA009529_FFPE/')
 
@@ -67,17 +74,6 @@ vcf_locations.keySet().each { k ->
 vcfs.eachWithIndex { v, i ->
   vcf = v[2]
   vcf_index = vcf + '.tbi'
-
-
-  // NOTE: artificially introducing some unindexed input vcfs
-  // REMOVE (DEV)
-  if (i % 2 == 0 | i > 2) {
-    vcfs[i][1] & ~0b0100
-    vcfs[i] << null
-    return
-  }
-
-
   if (vcf_index.exists()) {
     vcfs[i][1] |= 0b0100
     vcfs[i] << vcf_index
@@ -90,14 +86,61 @@ vcfs.eachWithIndex { v, i ->
 // Create channel of input vcfs
 ch_vcfs = Channel.fromList(vcfs)
 
-// TODO: see where this best fits
-include { module_index_vcf } from './modules/index_vcf.nf'
-include { pair_vcfs_and_indices } from './lib/utility.groovy'
+def prepare_vcf_channel(ch_vcfs) {
+  ch_vcfs_split = ch_vcfs
+    .branch {
+      input: ! (it[1] & 0b0001)
+      filtered: it[1] & 0b0001
+    }
+  ch_vcfs_paired_input = pair_vcf_and_indices(ch_vcfs_split.input)
+  ch_vcfs_paired_filtered = pair_vcf_and_indices(ch_vcfs_split.filtered)
+  return Channel.empty().mix(ch_vcfs_paired_input, ch_vcfs_paired_filtered)
+}
+
+def pair_vcf_and_indices(ch_vcf_and_indices) {
+  ch_result = ch_vcf_and_indices
+    .groupTuple()
+    .map { vcf_type, flags, vcfs, vcf_indices ->
+      if (flags[0] & 0b0010) {
+        // First element is position two
+        index_one = 1
+        index_two = 0
+      } else if (flags[1] & 0b0010) {
+        // Second element is position two
+        index_one = 0
+        index_two = 1
+      } else {
+        // TODO: assertion
+      }
+
+
+      //// Set single flag for source type
+      //if ((flags[0] & 0b0001) != (flags[1] & 0b0001)) {
+      //  // TODO: assertion
+      //} else if (flags[0] & 0b0001) {
+      //  source = 'input'
+      //} else {
+      //  source = 'filtered'
+      //}
+
+      // Check flags are consistent - position expected to differ
+      if ((flags[0] & 0b0101) != (flags[1] & 0b0101)) {
+        // TODO: assertion
+      }
+
+      return [
+        vcf_type,
+        flags[index_one],
+        vcfs[index_one],
+        vcf_indices[index_one],
+        vcfs[index_two],
+        vcf_indices[index_two]
+      ]
+    }
+  return ch_result
+}
 
 workflow {
-  // 4. target channel format:
-  //    [vcf_name(small/struct/etc), vcf_1, index_1, vcf_2, index_2]
-
   // Filter variants
   // Select only [vcf_type, flags, vcf_filepath]
   ch_vcfs_pass = module_variants_pass(ch_vcfs.map { it[0..2] })
@@ -108,24 +151,26 @@ workflow {
     .map { it[0..2] }
     .mix(ch_vcfs_pass)
 
-  // Index vcfs and join with vcfs that already ahve an index
+  // Index vcfs and join with vcfs that already have an index
   ch_vcfs_indexed = module_index_vcf(ch_vcfs_no_index)
-  ch_vcfs_indices = ch_vcfs_indexed
+  ch_vcfs_indexed_all = ch_vcfs_indexed
     .mix(ch_vcfs.filter { it[1] & 0b0100 })
 
-  // TODO: complete channel transform to target (see above), then complete workflow
-  ch_temp = ch_vcfs_indices
-    .branch {
-      input: ! (it[1] & 0b0001)
-      filtered: it[1] & 0b0001
+  ch_vcfs_prepared = prepare_vcf_channel(ch_vcfs_indexed_all)
+
+  ch_vcfs_intersects = module_variants_intersect(ch_vcfs_prepared)
+
+  // Variant counts
+  ch_vcfs_to_count = Channel.empty().mix(
+    ch_vcfs_prepared.flatMap { vcf_type, flags, vcf_one, index_one, vcf_two, index_two ->
+      flags_one = flags
+      flags_two = flags ^ 0b0001
+      return [[vcf_type, flags_one, vcf_one], [vcf_type, flags_two, vcf_two]]
+    },
+    ch_vcfs_intersects.flatMap { d ->
+      d[2].collect { dd -> ["${d[0]}__intersect", d[1], dd] }
     }
-
-  // Tag inputs to track and re-pair downstream
-  //ch_vcfs = Channel.empty().mix(
-  //  Channel.value('pass').combine(ch_vcfs_pass),
-  //  Channel.value('input').combine(ch_vcfs_input)
-  //)
-
-  // Perform comparison
-  //workflow_compare_vcfs(ch_vcfs)
+  )
+  ch_counts = module_count_variants(ch_vcfs_to_count)
+  combine_counts = module_combine_counts(ch_counts.collect())
 }
