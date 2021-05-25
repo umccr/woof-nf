@@ -7,6 +7,7 @@ include { module_count_variants } from './modules/count_variants.nf'
 include { module_index_vcf } from './modules/index_vcf.nf'
 include { module_variants_intersect } from './modules/variants_intersect.nf'
 include { module_variants_pass } from './modules/variants_pass.nf'
+include { module_vcf_copy } from './modules/vcf_copy.nf'
 
 // Import utilities
 include { discover_vcfs } from './lib/utility.groovy'
@@ -20,12 +21,13 @@ run_dir_two = file('data/1.1.0-rc.8-d6558f5734/CUP-Pairs8/CUP-Pairs8__PRJ180660_
 ch_vcfs = discover_vcfs(run_dir_one, run_dir_two)
 
 workflow {
-  // Filter variants
+  // Publish discovered VCFs in output directory and filter failed calls/variants
   // Select only [vcf_type, flags, vcf_filepath]
+  ch_vcfs_all = module_vcf_copy(ch_vcfs.map { it[0..2] })
   ch_vcfs_pass = module_variants_pass(ch_vcfs.map { it[0..2] })
 
   // Select input vcfs that have no index and add newly created vcfs for indexing
-  ch_vcfs_no_index = ch_vcfs
+  ch_vcfs_no_index = ch_vcfs_all
     .filter { ! (it[1] & FlagBits.INDEXED) }
     .map { it[0..2] }
     .mix(ch_vcfs_pass)
