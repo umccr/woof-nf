@@ -12,6 +12,7 @@ vcf_locations = [
 ]
 
 def discover_vcfs(dir_one, dir_two) {
+  // Locate VCFs in each input directory (as defined in `vcf_locations`)
   vcfs_one = discover_vcfs_in_dir(dir_one)
   vcfs_two = discover_vcfs_in_dir(dir_two)
   // Collate vcfs, include only if comparison is possible otherwise warn
@@ -40,7 +41,53 @@ def discover_vcfs(dir_one, dir_two) {
   return Channel.fromList(vcfs)
 }
 
+def discover_vcfs_in_dir(directory) {
+  // Find all VCFs
+  vcf_filelist = [:]
+  vcf_locations.each { name, val ->
+    subdirectory = val[0]
+    regex = val[1]
+    vcf_filelist[name] = []
+    directory_fullpath = directory / subdirectory
+    if (directory_fullpath.exists()) {
+      (directory / subdirectory).eachFileMatch(groovy.io.FileType.FILES, regex, { vcf_filelist[name] << it })
+    }
+  }
+  // Unpack list of discovered VCFs as:
+  // vcf_filelist[my_key] = my_vcf_filepath
+  vcf_filelist.keySet().each { k ->
+    // Set key value to filepath itself or null if missing, or raise error where more than one file found
+    n_files = vcf_filelist[k].size()
+    if (n_files == 1) {
+      vcf_filelist[k] = vcf_filelist[k][0]
+    } else if (n_files == 0) {
+      vcf_filelist[k] = null
+    } else if (n_files > 1) {
+      filenames = vcf_filelist[k].join('\n')
+      regex = vcf_locations[k][1]
+      exit 1, "ERROR: expected zero or one file for $k but got $n_files with '$regex':\n\n$filenames"
+    }
+  }
+  return vcf_filelist
+}
+
+def prepare_vcf_channel(ch_vcfs) {
+  // Pair and correctly order VCFs and indices
+  // Input and filtered VCFs must be split first to group correctly
+  // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
+  ch_vcfs_split = ch_vcfs
+    .branch {
+      input: ! (it[1] & 0b0001)
+      filtered: it[1] & 0b0001
+    }
+  ch_vcfs_paired_input = pair_vcf_and_indices(ch_vcfs_split.input)
+  ch_vcfs_paired_filtered = pair_vcf_and_indices(ch_vcfs_split.filtered)
+  return Channel.empty().mix(ch_vcfs_paired_input, ch_vcfs_paired_filtered)
+}
+
 def pair_vcf_and_indices(ch_vcf_and_indices) {
+  // Pair and correctly order VCFs and indices
+  // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
   ch_result = ch_vcf_and_indices
     .groupTuple()
     .map { vcf_type, flags, vcfs, vcf_indices ->
@@ -69,78 +116,4 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
       ]
     }
   return ch_result
-}
-
-def prepare_vcf_channel(ch_vcfs) {
-  ch_vcfs_split = ch_vcfs
-    .branch {
-      input: ! (it[1] & 0b0001)
-      filtered: it[1] & 0b0001
-    }
-  ch_vcfs_paired_input = pair_vcf_and_indices(ch_vcfs_split.input)
-  ch_vcfs_paired_filtered = pair_vcf_and_indices(ch_vcfs_split.filtered)
-  return Channel.empty().mix(ch_vcfs_paired_input, ch_vcfs_paired_filtered)
-}
-
-def discover_vcfs_in_dir(directory) {
-  vcf_filelist = [:]
-  vcf_locations.each { name, val ->
-    subdirectory = val[0]
-    regex = val[1]
-    vcf_filelist[name] = []
-    directory_fullpath = directory / subdirectory
-    if (directory_fullpath.exists()) {
-      (directory / subdirectory).eachFileMatch(groovy.io.FileType.FILES, regex, { vcf_filelist[name] << it })
-    }
-  }
-  vcf_filelist.keySet().each { k ->
-    // Set key value to filepath itself or null if missing, or raise error where more than one file found
-    n_files = vcf_filelist[k].size()
-    if (n_files == 1) {
-      vcf_filelist[k] = vcf_filelist[k][0]
-    } else if (n_files == 0) {
-      vcf_filelist[k] = null
-    } else if (n_files > 1) {
-      filenames = vcf_filelist[k].join('\n')
-      regex = vcf_locations[k][1]
-      exit 1, "ERROR: expected zero or one file for $k but got $n_files with '$regex':\n\n$filenames"
-    }
-  }
-  return vcf_filelist
-}
-
-def pair_vcfs_and_indices(ch_vcfs, ch_vcfs_indices) {
-  ch_vcfs_indexed = ch_vcfs
-    .join(ch_vcfs_indices, by: [0, 1])
-    .toList()
-    .flatMap { d ->
-      // Output channel to contain:
-      //   ['input', vcf_input_one, index_input_one, vcf_input_two, index_input_two]
-      //   ['pass', vcf_pass_one, index_pass_one, vcf_pass_two, index_pass_two]
-      input = []
-      pass = []
-      d.collect { dd ->
-        // Determine position in input/pass array: vcf_one is first, vcf_two is second
-        if (dd[1] == 'one') {
-          position = 0
-        } else if (dd[1] == 'two') {
-          position = 1
-        } else {
-          // TODO: assertion
-        }
-        // Insert into correct array at the appropriate position
-        if (dd[0]=='input') {
-          input[position] = dd[2..-1]
-        } else if (dd[0]=='pass') {
-          pass[position] = dd[2..-1]
-        } else {
-          // TODO: assertion
-        }
-      }
-      return [
-        ['input', *input.flatten()],
-        ['pass', *pass.flatten()]
-      ]
-    }
-  return ch_vcfs_indexed
 }

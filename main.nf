@@ -35,21 +35,27 @@ workflow {
   ch_vcfs_indexed_all = ch_vcfs_indexed
     .mix(ch_vcfs.filter { it[1] & 0b0100 })
 
+  // Prepare/group/format VCF channel and then observe differences between VCFs
+  // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
   ch_vcfs_prepared = prepare_vcf_channel(ch_vcfs_indexed_all)
-
   ch_vcfs_intersects = module_variants_intersect(ch_vcfs_prepared)
 
-  // Variant counts
+  // Create channels for counting
+  // Format: [vcf_type, flags, vcf]
   ch_vcfs_to_count = Channel.empty().mix(
+     // Update flag position for unpacked VCFs; `flags` variable here always in respect to vcf_one wrt position
     ch_vcfs_prepared.flatMap { vcf_type, flags, vcf_one, index_one, vcf_two, index_two ->
       flags_one = flags
       flags_two = flags ^ 0b0001
       return [[vcf_type, flags_one, vcf_one], [vcf_type, flags_two, vcf_two]]
     },
+    // Set distinct name
     ch_vcfs_intersects.flatMap { d ->
       d[2].collect { dd -> ["${d[0]}__intersect", d[1], dd] }
     }
   )
+
+  // Variant counts
   ch_counts = module_count_variants(ch_vcfs_to_count)
   combine_counts = module_combine_counts(ch_counts.collect())
 }
