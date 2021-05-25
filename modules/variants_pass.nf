@@ -10,9 +10,9 @@ process module_variants_pass {
   tuple val(vcf_type), val(flags_out), path('*.vcf.gz')
 
   script:
-  // Unset has_index and set not input flag
-  flags_out = (flags_in & ~0b0100)
-  flags_out = (flags_out ^ 0b0001)
+  // Unset has_index and set not filtered flag
+  flags_out = (flags_in & ~FlagBits.INDEXED)
+  flags_out = (flags_out ^ FlagBits.FILTERED)
   def sample_name = vcf.getSimpleName()
   """
   {

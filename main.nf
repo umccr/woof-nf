@@ -26,14 +26,14 @@ workflow {
 
   // Select input vcfs that have no index and add newly created vcfs for indexing
   ch_vcfs_no_index = ch_vcfs
-    .filter { ! (it[1] & 0b0100) }
+    .filter { ! (it[1] & FlagBits.INDEXED) }
     .map { it[0..2] }
     .mix(ch_vcfs_pass)
 
   // Index vcfs and join with vcfs that already have an index
   ch_vcfs_indexed = module_index_vcf(ch_vcfs_no_index)
   ch_vcfs_indexed_all = ch_vcfs_indexed
-    .mix(ch_vcfs.filter { it[1] & 0b0100 })
+    .mix(ch_vcfs.filter { it[1] & FlagBits.INDEXED })
 
   // Prepare/group/format VCF channel and then observe differences between VCFs
   // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
@@ -46,7 +46,7 @@ workflow {
      // Update flag position for unpacked VCFs; `flags` variable here always in respect to vcf_one wrt position
     ch_vcfs_prepared.flatMap { vcf_type, flags, vcf_one, index_one, vcf_two, index_two ->
       flags_one = flags
-      flags_two = flags ^ 0b0001
+      flags_two = flags ^ FlagBits.PTWO
       return [[vcf_type, flags_one, vcf_one], [vcf_type, flags_two, vcf_two]]
     },
     // Set distinct name

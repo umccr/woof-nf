@@ -10,7 +10,7 @@ process module_variants_intersect {
   tuple val(vcf_type), val(flags), path('*vcf')
 
   script:
-  source = (flags & 0b0001) ? 'filtered' : 'input'
+  source = (flags & FlagBits.FILTERED) ? 'filtered' : 'input'
   """
   bcftools isec 1.vcf.gz 2.vcf.gz -p ./
   """

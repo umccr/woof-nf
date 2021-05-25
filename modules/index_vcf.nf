@@ -8,8 +8,7 @@ process module_index_vcf {
   tuple val(vcf_type), val(flags_out), path(vcf), path('*.tbi')
 
   script:
-  // Index has_index flat
-  flags_out = flags_in ^ 0b0100
+  flags_out = flags_in ^ FlagBits.INDEXED
   """
   tabix "${vcf}"
   """

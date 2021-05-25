@@ -21,8 +21,8 @@ def discover_vcfs(dir_one, dir_two) {
     if (vcfs_one[k] == null | vcfs_two[k] == null) {
       // Warn
     } else {
-      vcfs << [k, 0b000, vcfs_one[k]]
-      vcfs << [k, 0b010, vcfs_two[k]]
+      vcfs << [k, 0, vcfs_one[k]]
+      vcfs << [k, FlagBits.PTWO, vcfs_two[k]]
     }
   }
   // Check for existing vcf indices
@@ -30,10 +30,10 @@ def discover_vcfs(dir_one, dir_two) {
     vcf = v[2]
     vcf_index = vcf + '.tbi'
     if (vcf_index.exists()) {
-      vcfs[i][1] |= 0b0100
+      vcfs[i][1] |= FlagBits.INDEXED
       vcfs[i] << vcf_index
     } else {
-      vcfs[i][1] &= ~0b0100
+      vcfs[i][1] &= ~FlagBits.INDEXED
       vcfs[i] << null
     }
   }
@@ -77,8 +77,8 @@ def prepare_vcf_channel(ch_vcfs) {
   // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
   ch_vcfs_split = ch_vcfs
     .branch {
-      input: ! (it[1] & 0b0001)
-      filtered: it[1] & 0b0001
+      input: ! (it[1] & FlagBits.FILTERED)
+      filtered: it[1] & FlagBits.FILTERED
     }
   ch_vcfs_paired_input = pair_vcf_and_indices(ch_vcfs_split.input)
   ch_vcfs_paired_filtered = pair_vcf_and_indices(ch_vcfs_split.filtered)
@@ -91,11 +91,11 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
   ch_result = ch_vcf_and_indices
     .groupTuple()
     .map { vcf_type, flags, vcfs, vcf_indices ->
-      if (flags[0] & 0b0010) {
+      if (flags[0] & FlagBits.PTWO) {
         // First element is position two
         index_one = 1
         index_two = 0
-      } else if (flags[1] & 0b0010) {
+      } else if (flags[1] & FlagBits.PTWO) {
         // Second element is position two
         index_one = 0
         index_two = 1
@@ -103,7 +103,8 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
         // TODO: assertion
       }
       // Check flags are consistent - position expected to differ
-      if ((flags[0] & 0b0101) != (flags[1] & 0b0101)) {
+      check_bits = FlagBits.FILTERED ^ FlagBits.INDEXED
+      if ((flags[0] & check_bits) != (flags[1] & check_bits)) {
         // TODO: assertion
       }
       return [
