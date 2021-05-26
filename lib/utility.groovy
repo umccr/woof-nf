@@ -91,6 +91,8 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
   ch_result = ch_vcf_and_indices
     .groupTuple()
     .map { vcf_type, flags, vcfs, vcf_indices ->
+      def index_one = null
+      def index_two = null
       if (flags[0] & FlagBits.PTWO) {
         // First element is position two
         index_one = 1
