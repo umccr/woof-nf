@@ -34,6 +34,7 @@ def discover_vcfs(dir_one, dir_two) {
       vcfs[i] << vcf_index
     } else {
       vcfs[i][1] &= ~FlagBits.INDEXED
+      // NOTE: using Path instance to avoid NF restrictions on path() process inputs
       vcfs[i] << Paths.get('NO_FILE')
     }
   }
