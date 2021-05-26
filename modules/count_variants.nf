@@ -9,6 +9,7 @@ process module_count_variants {
 
   script:
   source = (flags & FlagBits.FILTERED) ? 'input' : 'filtered'
+  run = (flags & FlagBits.PTWO) ? 'second' : 'first'
   uuid = UUID.randomUUID().toString()
   filename = "${uuid}.tsv"
   """
@@ -19,6 +20,12 @@ process module_count_variants {
   else
     variant_count=\$(sed '/^#/d' "${vcf}" | wc -l)
   fi;
-  echo -e "${vcf_type}\t${vcf.getSimpleName()}\t${source}\t\${variant_count}" > "${filename}"
+  # Appropriately set run value
+  if [[ "${vcf_type}" =~ __intersect\$ ]]; then
+    run_value='intersect'
+  else
+    run_value="${run}"
+  fi
+  echo -e "${vcf_type}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "${filename}"
   """
 }

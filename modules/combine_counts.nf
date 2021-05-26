@@ -12,7 +12,7 @@ process module_combine_counts {
   script:
   """
   {
-    echo -e 'vcf_type\tfilename\tsource\tcount';
+    echo -e 'vcf_type\tfilename\trun\tsource\tcount';
     cat ${counts};
   } > counts.tsv
   """
