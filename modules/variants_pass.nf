@@ -13,7 +13,7 @@ process module_variants_pass {
   // Unset has_index and set not filtered flag
   flags_out = (flags_in & ~FlagBits.INDEXED)
   flags_out = (flags_out ^ FlagBits.FILTERED)
-  run = (flags_in & FlagBits.PTWO) ? 'first' : 'second'
+  run = (flags_in & FlagBits.PTWO) ? 'second' : 'first'
   sample_name = "${run}__${vcf_type}__filtered__${vcf.getSimpleName()}"
   """
   {

@@ -7,11 +7,13 @@ process module_variants_intersect {
   tuple val(vcf_type), val(flags), path('1.vcf.gz'), path('1.vcf.gz.tbi'), path('2.vcf.gz'), path('2.vcf.gz.tbi')
 
   output:
-  tuple val(vcf_type), val(flags), path('*vcf')
+  tuple val(vcf_type), val(flags), path('*.vcf')
 
   script:
   source = (flags & FlagBits.FILTERED) ? 'filtered' : 'input'
   """
   bcftools isec 1.vcf.gz 2.vcf.gz -p ./
+  # Remove unneeded output VCF; NF output globbing doesn't allow exclusion at this level
+  rm 0003.vcf
   """
 }
