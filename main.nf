@@ -30,6 +30,7 @@ workflow {
   ch_vcfs_pass = module_variants_pass(ch_vcfs.map { it[0..2] })
 
   // Select input vcfs that have no index and add newly created vcfs for indexing
+  // Format (in/out): [vcf_type, flags, vcf]
   ch_vcfs_no_index = ch_vcfs_all
     .filter { ! (it[1] & FlagBits.INDEXED) }
     .map { it[0..2] }
@@ -37,8 +38,10 @@ workflow {
 
   // Index vcfs and join with vcfs that already have an index
   ch_vcfs_indexed = module_index_vcf(ch_vcfs_no_index)
+
+  // Format: [vcf_type, flags, vcf, vcf_index]
   ch_vcfs_indexed_all = ch_vcfs_indexed
-    .mix(ch_vcfs.filter { it[1] & FlagBits.INDEXED })
+    .mix(ch_vcfs_all.filter { it[1] & FlagBits.INDEXED })
 
   // Prepare/group/format VCF channel and then observe differences between VCFs
   // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
