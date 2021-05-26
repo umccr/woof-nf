@@ -1,4 +1,6 @@
 process module_index_vcf {
+  publishDir "${params.output_dir}/1_vcfs/", pattern: '*.tbi'
+
   container 'quay.io/biocontainers/bcftools'
 
   input:

@@ -34,7 +34,7 @@ def discover_vcfs(dir_one, dir_two) {
       vcfs[i] << vcf_index
     } else {
       vcfs[i][1] &= ~FlagBits.INDEXED
-      vcfs[i] << null
+      vcfs[i] << Paths.get('NO_FILE')
     }
   }
   // Create and return channel of input vcfs

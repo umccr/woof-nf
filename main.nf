@@ -21,9 +21,12 @@ run_dir_two = file('data/1.1.0-rc.8-d6558f5734/CUP-Pairs8/CUP-Pairs8__PRJ180660_
 ch_vcfs = discover_vcfs(run_dir_one, run_dir_two)
 
 workflow {
-  // Publish discovered VCFs in output directory and filter failed calls/variants
-  // Select only [vcf_type, flags, vcf_filepath]
-  ch_vcfs_all = module_vcf_copy(ch_vcfs.map { it[0..2] })
+  // Publish discovered VCFs and indices in output directory
+  // Format (in/out): [vcf_type, flags, vcf, vcf_index]
+  ch_vcfs_all = module_vcf_copy(ch_vcfs)
+
+  // Filter non-PASS variants
+  // Format (in/out): [vcf_type, flags, vcf]
   ch_vcfs_pass = module_variants_pass(ch_vcfs.map { it[0..2] })
 
   // Select input vcfs that have no index and add newly created vcfs for indexing
