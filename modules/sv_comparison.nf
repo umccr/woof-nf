@@ -9,6 +9,7 @@ process module_sv_comparison {
 
   script:
   """
+  sv_comparison.py --vcf_1 1.vcf.gz --vcf_2 2.vcf.gz
   touch result.tsv
   """
 }
