@@ -1,4 +1,4 @@
-process module_variants_pass {
+process module_smlv_pass {
   publishDir "${params.output_dir}/small_variants/1_filtered_vcfs/"
 
   container 'quay.io/biocontainers/bcftools'

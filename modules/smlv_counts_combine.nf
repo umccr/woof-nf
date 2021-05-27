@@ -1,4 +1,4 @@
-process module_combine_counts {
+process module_smlv_counts_combine {
   publishDir "${params.output_dir}/small_variants/"
 
   container 'public.ecr.aws/amazonlinux/amazonlinux:latest'

@@ -1,4 +1,4 @@
-process module_snv_comparison {
+process module_smlv_comparison {
   publishDir "${params.output_dir}/small_variants/3_comparison/"
 
   input:

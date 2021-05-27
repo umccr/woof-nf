@@ -1,4 +1,4 @@
-process module_count_variants {
+process module_smlv_count {
   container 'public.ecr.aws/amazonlinux/amazonlinux:latest'
 
   input:

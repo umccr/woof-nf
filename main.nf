@@ -15,10 +15,10 @@ run_dir_one = file('data/1.0.3-rc.11/CUP-Pairs8/')
 run_dir_two = file('data/1.2.0/CUP-Pairs8/')
 
 // Discover inputs
-(ch_cnv, ch_snv, ch_sv) = discover_inputs(run_dir_one, run_dir_two)
+(ch_cnv, ch_smlv, ch_sv) = discover_inputs(run_dir_one, run_dir_two)
 
 workflow {
   workflow_copy_number_variants(ch_cnv)
-  workflow_small_variants(ch_snv)
+  workflow_small_variants(ch_smlv)
   workflow_structural_variants(ch_sv)
 }

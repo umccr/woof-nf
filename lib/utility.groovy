@@ -14,7 +14,7 @@ def discover_inputs(dir_one, dir_two) {
   inputs_two = discover_inputs_in_dir(dir_two)
   // Collate input files, include only if comparison is possible otherwise warn
   inputs_cnv = []
-  inputs_snv = []
+  inputs_smlv = []
   inputs_sv = []
   input_file_locations.keySet().each { k ->
     if (inputs_one[k] == null | inputs_two[k] == null) {
@@ -24,8 +24,8 @@ def discover_inputs(dir_one, dir_two) {
         inputs_cnv << [k, 0, inputs_one[k]]
         inputs_cnv << [k, FlagBits.PTWO, inputs_two[k]]
       } else if (k == 'cpsr' | k == 'pcgr') {
-        inputs_snv << [k, 0, inputs_one[k]]
-        inputs_snv << [k, FlagBits.PTWO, inputs_two[k]]
+        inputs_smlv << [k, 0, inputs_one[k]]
+        inputs_smlv << [k, FlagBits.PTWO, inputs_two[k]]
       } else if (k == 'manta') {
         inputs_sv << [k, 0, inputs_one[k]]
         inputs_sv << [k, FlagBits.PTWO, inputs_two[k]]
@@ -35,11 +35,11 @@ def discover_inputs(dir_one, dir_two) {
     }
   }
   // Check for existing VCF indices
-  inputs_snv_with_index = locate_vcf_indices(inputs_snv)
+  inputs_smlv_with_index = locate_vcf_indices(inputs_smlv)
   // Create and return channel of inputs
   return [
     Channel.fromList(inputs_cnv),
-    Channel.fromList(inputs_snv_with_index),
+    Channel.fromList(inputs_smlv_with_index),
     Channel.fromList(inputs_sv)
   ]
 }
@@ -93,7 +93,7 @@ def locate_vcf_indices(inputs) {
   return inputs
 }
 
-def prepare_snv_channel(ch_vcfs) {
+def prepare_smlv_channel(ch_vcfs) {
   // Pair and correctly order VCFs and indices
   // Input and filtered VCFs must be split first to group correctly
   // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]

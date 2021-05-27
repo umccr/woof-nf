@@ -1,4 +1,4 @@
-process module_variants_intersect {
+process module_smlv_intersect {
   publishDir "${params.output_dir}/small_variants/2_variants_intersect/${source}/${vcf_type}"
 
   container 'quay.io/biocontainers/bcftools'
