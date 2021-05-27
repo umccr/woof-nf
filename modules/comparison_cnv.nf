@@ -9,7 +9,7 @@ process module_cnv_comparison {
 
   script:
   """
-  cnv_comparison.py --tsv_1 1.tsv --tsv_2 2.tsv
+  comparison_cnv.py --tsv_1 1.tsv --tsv_2 2.tsv
   touch result.tsv
   """
 }

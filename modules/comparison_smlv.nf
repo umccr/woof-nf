@@ -9,7 +9,7 @@ process module_smlv_comparison {
 
   script:
   """
-  snv_comparison.py --vcf_1 "${vcf_1}" --vcf_2 "${vcf_2}" --vcf_3 "${vcf_3}"
+  comparison_smlv.py --vcf_1 "${vcf_1}" --vcf_2 "${vcf_2}" --vcf_3 "${vcf_3}"
   touch result.tsv
   """
 }
