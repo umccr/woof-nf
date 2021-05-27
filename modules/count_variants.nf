@@ -22,7 +22,7 @@ process module_count_variants {
   fi;
   # Appropriately set run value
   if [[ "${vcf_type}" =~ __intersect\$ ]]; then
-    run_value='intersect'
+    run_value='n/a'
   else
     run_value="${run}"
   fi
