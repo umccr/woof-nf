@@ -1,78 +1,100 @@
-// Format: [vcf_name, [subdirectory_path, regex_selector]]
-vcf_locations = [
-  'purple_somatic': ['purple', ~/^.+purple\.somatic\.vcf\.gz$/],
-  'purple_sv': ['purple', ~/^.+purple\.sv\.vcf\.gz$/],
-  'manta': ['structural', ~/^.+manta\.vcf\.gz$/],
-  'pierian': ['pierian', ~/^.+manta\.single\.vcf\.gz$/],
-  'pierian_somatic': ['pierian', ~/^.+somatic-PASS-single.*\.vcf\.gz$/],
-  'small_variants_germline': ['small_variants', ~/^.+germline\.predispose_genes\.vcf\.gz$/],
-  'small_variants_somatic': ['small_variants', ~/^.+somatic\.vcf\.gz$/],
-  'small_variants_pass': ['small_variants', ~/^.+somatic-PASS\.vcf\.gz$/],
-  'small_variants_sage': ['small_variants/sage1/', ~/^.+sage\.vcf\.gz$/],
+import java.nio.file.Paths
+
+// Format: [input_name, [subdirectory_path, regex_selector]]
+input_file_locations = [
+  'cpsr': ['small_variants', ~/^.+-germline\.predispose_genes\.vcf\.gz$/],
+  'pcgr': ['small_variants', ~/^.+-somatic-PASS\.vcf\.gz$/],
+  'manta': ['structural', ~/^.+-manta\.vcf\.gz$/],
+  'purple': ['purple', ~/^.+\.purple\.cnv\.gene\.tsv$/],
 ]
 
-def discover_vcfs(dir_one, dir_two) {
-  // Locate VCFs in each input directory (as defined in `vcf_locations`)
-  vcfs_one = discover_vcfs_in_dir(dir_one)
-  vcfs_two = discover_vcfs_in_dir(dir_two)
-  // Collate vcfs, include only if comparison is possible otherwise warn
-  vcfs = []
-  vcf_locations.keySet().each { k ->
-    if (vcfs_one[k] == null | vcfs_two[k] == null) {
+def discover_inputs(dir_one, dir_two) {
+  // Locate inputs files in each input directory (as defined in `input_file_locations`)
+  inputs_one = discover_inputs_in_dir(dir_one)
+  inputs_two = discover_inputs_in_dir(dir_two)
+  // Collate input files, include only if comparison is possible otherwise warn
+  inputs_cnv = []
+  inputs_snv = []
+  inputs_sv = []
+  input_file_locations.keySet().each { k ->
+    if (inputs_one[k] == null | inputs_two[k] == null) {
       // Warn
     } else {
-      vcfs << [k, 0, vcfs_one[k]]
-      vcfs << [k, FlagBits.PTWO, vcfs_two[k]]
+      if (k == 'purple') {
+        inputs_cnv << [k, 0, inputs_one[k]]
+        inputs_cnv << [k, FlagBits.PTWO, inputs_two[k]]
+      } else if (k == 'cpsr' | k == 'pcgr') {
+        inputs_snv << [k, 0, inputs_one[k]]
+        inputs_snv << [k, FlagBits.PTWO, inputs_two[k]]
+      } else if (k == 'manta') {
+        inputs_sv << [k, 0, inputs_one[k]]
+        inputs_sv << [k, FlagBits.PTWO, inputs_two[k]]
+      } else {
+        assert false
+      }
     }
   }
-  // Check for existing vcf indices
-  vcfs.eachWithIndex { v, i ->
-    vcf = v[2]
-    vcf_index = vcf + '.tbi'
-    if (vcf_index.exists()) {
-      vcfs[i][1] |= FlagBits.INDEXED
-      vcfs[i] << vcf_index
-    } else {
-      vcfs[i][1] &= ~FlagBits.INDEXED
-      // NOTE: using Path instance to avoid NF restrictions on path() process inputs
-      vcfs[i] << Paths.get('NO_FILE')
-    }
-  }
-  // Create and return channel of input vcfs
-  return Channel.fromList(vcfs)
+  // Check for existing VCF indices
+  inputs_snv_with_index = locate_vcf_indices(inputs_snv)
+  inputs_sv_with_index = locate_vcf_indices(inputs_sv)
+  // Create and return channel of inputs
+  return [
+    Channel.fromList(inputs_cnv),
+    Channel.fromList(inputs_snv_with_index),
+    Channel.fromList(inputs_sv_with_index)
+  ]
 }
 
-def discover_vcfs_in_dir(directory) {
-  // Find all VCFs
-  vcf_filelist = [:]
-  vcf_locations.each { name, val ->
+def discover_inputs_in_dir(directory) {
+  // Find all input files
+  input_filelist = [:]
+  input_file_locations.each { name, val ->
     subdirectory = val[0]
     regex = val[1]
-    vcf_filelist[name] = []
+    input_filelist[name] = []
     directory_fullpath = directory / subdirectory
     if (directory_fullpath.exists()) {
-      (directory / subdirectory).eachFileMatch(groovy.io.FileType.FILES, regex, { vcf_filelist[name] << it })
+      (directory / subdirectory).eachFileMatch(groovy.io.FileType.FILES, regex, { input_filelist[name] << it })
     }
   }
-  // Unpack list of discovered VCFs as:
-  // vcf_filelist[my_key] = my_vcf_filepath
-  vcf_filelist.keySet().each { k ->
+  // Unpack list of discovered input file as:
+  // input_filelist[my_key] = input_filepath
+  input_filelist.keySet().each { k ->
     // Set key value to filepath itself or null if missing, or raise error where more than one file found
-    n_files = vcf_filelist[k].size()
+    n_files = input_filelist[k].size()
     if (n_files == 1) {
-      vcf_filelist[k] = vcf_filelist[k][0]
+      input_filelist[k] = input_filelist[k][0]
     } else if (n_files == 0) {
-      vcf_filelist[k] = null
+      input_filelist[k] = null
     } else if (n_files > 1) {
-      filenames = vcf_filelist[k].join('\n')
-      regex = vcf_locations[k][1]
+      filenames = input_filelist[k].join('\n')
+      regex = input_file_locations[k][1]
       exit 1, "ERROR: expected zero or one file for $k but got $n_files with '$regex':\n\n$filenames"
     }
   }
-  return vcf_filelist
+  return input_filelist
 }
 
-def prepare_vcf_channel(ch_vcfs) {
+def locate_vcf_indices(inputs) {
+  inputs.eachWithIndex { v, i ->
+    file = v[2]
+    if (file.toString().endsWith('.tsv')) {
+      return
+    }
+    vcf_index = file + '.tbi'
+    if (vcf_index.exists()) {
+      inputs[i][1] |= FlagBits.INDEXED
+      inputs[i] << vcf_index
+    } else {
+      inputs[i][1] &= ~FlagBits.INDEXED
+      // NOTE: using Path instance to avoid NF restrictions on path() process inputs
+      inputs[i] << Paths.get('NO_FILE')
+    }
+  }
+  return inputs
+}
+
+def prepare_snv_channel(ch_vcfs) {
   // Pair and correctly order VCFs and indices
   // Input and filtered VCFs must be split first to group correctly
   // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
