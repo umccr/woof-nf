@@ -36,12 +36,11 @@ def discover_inputs(dir_one, dir_two) {
   }
   // Check for existing VCF indices
   inputs_snv_with_index = locate_vcf_indices(inputs_snv)
-  inputs_sv_with_index = locate_vcf_indices(inputs_sv)
   // Create and return channel of inputs
   return [
     Channel.fromList(inputs_cnv),
     Channel.fromList(inputs_snv_with_index),
-    Channel.fromList(inputs_sv_with_index)
+    Channel.fromList(inputs_sv)
   ]
 }
 
@@ -114,24 +113,10 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
   ch_result = ch_vcf_and_indices
     .groupTuple()
     .map { vcf_type, flags, vcfs, vcf_indices ->
-      def index_one = null
-      def index_two = null
-      if (flags[0] & FlagBits.PTWO) {
-        // First element is position two
-        index_one = 1
-        index_two = 0
-      } else if (flags[1] & FlagBits.PTWO) {
-        // Second element is position two
-        index_one = 0
-        index_two = 1
-      } else {
-        // TODO: assertion
-      }
-      // Check flags are consistent - position expected to differ
-      check_bits = FlagBits.FILTERED ^ FlagBits.INDEXED
-      if ((flags[0] & check_bits) != (flags[1] & check_bits)) {
-        // TODO: assertion
-      }
+      // Get index of first and second file
+      (index_one, index_two) = get_file_order(flags)
+      // Check flags are consistent
+      check_flag_consistency(flags)
       return [
         vcf_type,
         flags[index_one],
@@ -142,4 +127,45 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
       ]
     }
   return ch_result
+}
+
+def pair_files(ch_files) {
+  ch_result = ch_files
+    .groupTuple()
+    .map { input_type, flags, files ->
+      // Get index of first and second file
+      (index_one, index_two) = get_file_order(flags)
+      // Check flags are consistent
+      check_flag_consistency(flags)
+      return [
+        files[index_one],
+        files[index_two],
+      ]
+    }
+  return ch_result
+}
+
+def get_file_order(flags) {
+  def index_one = null
+  def index_two = null
+  if (flags[0] & FlagBits.PTWO) {
+    // First element is position two
+    index_one = 1
+    index_two = 0
+  } else if (flags[1] & FlagBits.PTWO) {
+    // Second element is position two
+    index_one = 0
+    index_two = 1
+  } else {
+    // TODO: assertion
+  }
+  return [index_one, index_two]
+}
+
+def check_flag_consistency(flags) {
+  // Check flags are consistent - position expected to differ
+  check_bits = FlagBits.FILTERED ^ FlagBits.INDEXED
+  if ((flags[0] & check_bits) != (flags[1] & check_bits)) {
+    // TODO: assertion
+  }
 }
