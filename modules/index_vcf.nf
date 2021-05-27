@@ -1,5 +1,5 @@
 process module_index_vcf {
-  publishDir "${params.output_dir}/1_vcfs/", pattern: '*.tbi'
+  publishDir "${params.output_dir}/small_variants/1_filtered_vcfs/", pattern: '*.tbi'
 
   container 'quay.io/biocontainers/bcftools'
 

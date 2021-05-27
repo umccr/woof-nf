@@ -1,5 +1,5 @@
 process module_variants_pass {
-  publishDir "${params.output_dir}/1_vcfs/"
+  publishDir "${params.output_dir}/small_variants/1_filtered_vcfs/"
 
   container 'quay.io/biocontainers/bcftools'
 

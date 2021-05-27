@@ -1,5 +1,5 @@
 process module_combine_counts {
-  publishDir "${params.output_dir}/3_variant_counts/"
+  publishDir "${params.output_dir}/small_variants/"
 
   container 'public.ecr.aws/amazonlinux/amazonlinux:latest'
 

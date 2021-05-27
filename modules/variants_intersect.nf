@@ -1,5 +1,5 @@
 process module_variants_intersect {
-  publishDir "${params.output_dir}/2_variants_intersect/${source}/${vcf_type}"
+  publishDir "${params.output_dir}/small_variants/2_variants_intersect/${source}/${vcf_type}"
 
   container 'quay.io/biocontainers/bcftools'
 
