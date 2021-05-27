@@ -2,7 +2,7 @@
 include { module_combine_counts } from '../modules/combine_counts.nf'
 include { module_count_variants } from '../modules/count_variants.nf'
 include { module_index_vcf } from '../modules/index_vcf.nf'
-include { module_snv_comparison } from '../modules/snv_comparison.nf'
+include { module_snv_comparison } from '../modules/comparison_snv.nf'
 include { module_variants_intersect } from '../modules/variants_intersect.nf'
 include { module_variants_pass } from '../modules/variants_pass.nf'
 

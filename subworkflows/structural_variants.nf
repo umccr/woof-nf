@@ -1,5 +1,5 @@
 // Import modules
-include { module_sv_comparison } from '../modules/sv_comparison.nf'
+include { module_sv_comparison } from '../modules/comparison_sv.nf'
 
 // Import utility
 include { pair_files } from '../lib/utility.groovy'

@@ -1,5 +1,5 @@
 // Import modules
-include { module_cnv_comparison } from '../modules/cnv_comparison.nf'
+include { module_cnv_comparison } from '../modules/comparison_cnv.nf'
 
 // Import utility
 include { pair_files } from '../lib/utility.groovy'
