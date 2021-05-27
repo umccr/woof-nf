@@ -2,6 +2,7 @@
 include { module_combine_counts } from '../modules/combine_counts.nf'
 include { module_count_variants } from '../modules/count_variants.nf'
 include { module_index_vcf } from '../modules/index_vcf.nf'
+include { module_snv_comparison } from '../modules/snv_comparison.nf'
 include { module_variants_intersect } from '../modules/variants_intersect.nf'
 include { module_variants_pass } from '../modules/variants_pass.nf'
 
@@ -34,6 +35,9 @@ workflow workflow_small_variants {
     ch_snv_prepared = prepare_snv_channel(ch_snv_indexed_all)
     // Format (ch_snv_intersects): [vcf_type, flags, [0000.vcf, 0001.vcf, 0002.vcf]]
     ch_snv_intersects = module_variants_intersect(ch_snv_prepared)
+
+    // Make SNV comparison
+    module_snv_comparison(ch_snv_intersects.map { it.flatten() })
 
     // Create channels for counting
     // Format (ch_snv_to_count): [vcf_type, flags, vcf]
