@@ -22,7 +22,13 @@ def main():
     args = get_arguments()
 
     # Read in files and prepare data
+    #   - woofr::manta_isec
+    #     - rock::prep_manta_vcf
+    #       - rock::read_manta_vcf
+    #       - rock::.manta_proper_pairs
     # Make comparison
+    #   - woofr::manta_isec_stats
+    #   - woofr::get_circos
     # Write result
 
 
