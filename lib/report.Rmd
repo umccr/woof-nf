@@ -1,0 +1,639 @@
+#MIT License
+#
+#Copyright (c) 2019 Peter Diakumis
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+author: "University of Melbourne Centre for Cancer Research"
+date: "`r format(Sys.time(), '%a %Y-%b-%d %H:%M')`"
+output:
+  html_document:
+    theme: simplex
+    toc: true
+    toc_float: false
+    toc_depth: 3
+    code_download: true
+    code_folding: hide
+  rmdformats::material:
+    highlight: kate
+params:
+  woof_final: "/path/to/woof/final"
+  run1_nm: "run1"
+  run2_nm: "run2"
+title: "`r glue::glue('Comparison of woof runs in {htmltools::br()}\'{normalizePath(params$woof_final)}\':{htmltools::br()}{params$run1_nm}{htmltools::br()}  vs.{htmltools::br()}{params$run2_nm} (Truthset)')`"
+description: "Comparison of bcbio and umccrise pipeline runs"
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 2000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+
+```{r load_knitr, include=F}
+require(knitr)
+knitr::opts_chunk$set(
+  echo = FALSE
+  )
+```
+
+```{r render_report_interactively, eval=F, echo=F}
+params_tmp <- list(
+  local = list(
+    woof_final = "/Users/pdiakumis/Desktop/projects/umccr/woofr/nogit/data/woof/final",
+    run1_nm = "run1",
+    run2_nm = "run2"
+  ),
+  gadi = list(
+    woof_final = "",
+    run1_nm = "run1",
+    run2_nm = "run2"
+  )
+)
+params <- params_tmp[["local"]]
+
+rmd <- here::here("inst/rmd/woof_compare.Rmd")
+render_me <- function() {
+  rmarkdown::render(
+    rmd,
+    params = params)
+}
+render_me()
+```
+
+```{r load_pkgs, message=F, warning=F}
+suppressPackageStartupMessages(library(bedr))
+suppressPackageStartupMessages(library(DiagrammeR))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(glue))
+suppressPackageStartupMessages(library(kableExtra))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(rock))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(woofr))
+```
+
+## Results
+
+
+```{r setup_vars}
+woof_final <- params$woof_final
+sample_dir <- file.path(woof_final, "samples")
+run1 <- params$run1_nm
+run2 <- params$run2_nm
+stopifnot(dir.exists(woof_final))
+stopifnot(nchar(run1) >= 1, nchar(run2) >= 2)
+
+samples <- list.dirs(sample_dir, recursive = FALSE, full.names = FALSE)
+
+flabels_snv_dir <- file.path(sample_dir, samples, "snv_eval")
+flabels_snv <- flabels_snv_dir %>%
+  list.dirs(recursive = FALSE, full.names = FALSE) %>%
+  unique()
+
+flabels_sv_dir <- file.path(sample_dir, samples, "sv_eval")
+flabels_sv <- flabels_sv_dir %>%
+  list.dirs(recursive = FALSE, full.names = FALSE) %>%
+  unique()
+
+flabels_cnv_dir <- file.path(sample_dir, samples, "cnv_eval")
+flabels_cnv <- flabels_cnv_dir %>%
+  list.dirs(recursive = FALSE, full.names = FALSE) %>%
+  unique()
+
+run_report <- TRUE
+run_snv <- TRUE
+run_sv <- TRUE
+run_cnv <- TRUE
+
+if (length(samples) == 0) {
+  run_report <- FALSE
+  stop(glue("Report won't be generated, since no sample folders were ",
+            "detected in:\n{woof_final}"))
+}
+if (length(flabels_snv) == 0) {
+  run_snv <- FALSE
+  tmp <- paste(flabels_snv_dir, collapse = "\n")
+  warning(glue("No SNV results are shown, since no SNV folders ",
+               "detected in:\n{tmp}"))
+}
+if (length(flabels_sv) == 0) {
+  run_sv <- FALSE
+  tmp <- paste(flabels_sv_dir, collapse = "\n")
+  warning(glue("No SV results are shown, since no SV folders ",
+               "detected in:\n{tmp}"))
+}
+if (length(flabels_cnv) == 0) {
+  run_cnv <- FALSE
+  tmp <- paste(flabels_cnv_dir, collapse = "\n")
+  warning(glue("No CNV results are shown, since no CNV folders ",
+               "detected in:\n{tmp}"))
+}
+```
+
+`r if (run_snv) { c("### SNVs/Indels {.tabset .tabset-fade}") }`
+
+```{r funcs_snvs, eval=run_snv}
+# Get file labels from unique woof/final/<sample>/snv_eval/<flab>/
+read_snv_count_files <- function(sample, flabel, pass_or_all) {
+
+  c1 <- file.path(sample_dir, sample, "snv_counts", "f1", flabel, pass_or_all, "count_vars.txt") %>%
+    woofr::read_snv_count_file() %>%
+    dplyr::mutate(subset = pass_or_all, run = "run1")
+  c2 <- file.path(sample_dir, sample, "snv_counts", "f2", flabel, pass_or_all, "count_vars.txt") %>%
+    woofr::read_snv_count_file() %>%
+    dplyr::mutate(subset = pass_or_all, run = "run2")
+
+  d <- dplyr::bind_rows(c1, c2)
+
+  if (all(is.na(d$flabel))) {
+    # return tibble of NAs
+    column_nms <- c("sample", "flabel", "subset", "tot_run1", "tot_run2")
+    res <- rep(NA, length(column_nms)) %>%
+      purrr::set_names(column_nms) %>%
+      as.list() %>%
+      dplyr::as_tibble()
+    return(res)
+  }
+  tidyr::pivot_wider(d, names_from = run, values_from = count, names_prefix = "tot_")
+}
+
+get_snv_stats <- function(sample, flabel, pass_or_all) {
+  dplyr::left_join(
+    read_snv_count_files(sample, flabel, pass_or_all),
+    woofr::read_snv_eval_file(file.path(sample_dir, sample, "snv_eval", flabel, pass_or_all, "eval_stats.tsv")),
+    by = c("sample", "flabel", "subset"))
+}
+
+get_snv_stats_sample <- function(sample, flab) {
+
+  get_stats_sample_subset <- function(sample, pass_or_all) {
+    flab %>%
+      purrr::map(~ get_snv_stats(sample, .x, pass_or_all)) %>%
+      dplyr::bind_rows()
+  }
+
+  dplyr::bind_rows(
+    get_stats_sample_subset(sample, "PASS"),
+    get_stats_sample_subset(sample, "ALL")
+  )
+}
+```
+
+```{r analysis_snvs, eval=run_snv}
+snv_res <- purrr::map(samples, ~ get_snv_stats_sample(.x, flabels_snv)) %>%
+  dplyr::bind_rows() %>%
+  dplyr::filter_all(dplyr::any_vars(!is.na(.))) %>% # keep rows with at least one non-NA
+  dplyr::arrange(SNP_Recall, SNP_Precision, sample, flabel) %>%
+  dplyr::mutate(id = as.character(dplyr::row_number()))
+```
+
+```{r tab_descr_snvs, eval=run_snv}
+snv_cap <- dplyr::tribble(
+  ~Column,    ~Description,
+  "run1",     run1,
+  "run2",     glue("{run2} (Truthset)"),
+  "subset",   "All/PASSed variants",
+  "SNP",      "SNP results",
+  "IND",      "Indel results",
+  "FP",       "False Positive",
+  "FN",       "False Negative",
+  "TP",       "True Positive",
+  "Truth",    "TP + FN",
+  "Recall",   "TP / Truth",
+  "Precision", "TP / TP + FP",
+  "fx", "(1 + x**2) * Precision * Recall / (x**2 * Precision + Recall)"
+) %>%
+  dplyr::mutate(y = paste(Column, Description, sep = ": ")) %>%
+  dplyr::pull(y)
+
+snv_cap <- htmltools::tags$caption(
+  htmltools::div(paste(snv_cap[1:5], collapse = "; ")),
+  htmltools::div(paste(snv_cap[6:11], collapse = "; ")),
+  htmltools::div(paste(snv_cap[12:length(snv_cap)], collapse = "; ")))
+```
+
+`r if (run_snv) { c("#### Comparison Table") }`
+
+```{r eval_tab_snvs, eval=run_snv}
+
+snv_tpar <- list(
+  # scrollY should be 35px per row, with max of 580px.
+  scroll_y = 10 + min(nrow(snv_res) * 35, 570),
+  bgsize = "90% 90%",
+  big_mark_cols = c("tot_run1", "tot_run2",
+                    "SNP_Truth", "SNP_TP", "SNP_FP", "SNP_FN",
+                    "IND_Truth", "IND_TP", "IND_FP", "IND_FN"),
+  bar_colour = "lightblue",
+  bar_range = c(0.97, 1))
+
+snv_res %>%
+  dplyr::select(
+    id, sample, flabel, subset, tot_run1, tot_run2,
+    dplyr::contains("Recall"), dplyr::contains("Precision"),
+    dplyr::matches("f1$"), dplyr::everything(), -dplyr::matches("f[23]$")) %>%
+  dplyr::mutate_if(is.numeric, round, 3) %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  dplyr::rename(SNP_Rec = "SNP_Recall", IND_Rec = "IND_Recall",
+                SNP_Prec = "SNP_Precision", IND_Prec = "IND_Precision") %>%
+  DT::datatable(
+    rownames = FALSE, caption = snv_cap, class = "cell-border display compact",
+    filter = list(position = "top", clear = FALSE, plain = FALSE),
+    extensions = c("Scroller", "KeyTable"),
+    options = list(scroller = TRUE, scrollY = snv_tpar$scroll_y, scrollX = TRUE,
+                   autoWidth = TRUE, keys = TRUE, dom = 'lfrtip')) %>%
+  DT::formatStyle(
+    paste0(c("SNP_", "IND_"), rep(c("Rec", "Prec", "f1"), each = 2)),
+    background = styleColorBar(snv_tpar$bar_range, color = snv_tpar$bar_colour),
+    backgroundSize = snv_tpar$bgsize, backgroundRepeat = 'no-repeat', backgroundPosition = 'center') %>%
+  DT::formatCurrency(snv_tpar$big_mark_cols, currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+`r if (run_sv) { c("### Structural Variants {.tabset .tabset-fade}") }`
+
+```{r funcs_svs, eval=run_sv}
+read_sv_fpfn_files_sample <- function(sample) {
+  purrr::map(flabels_sv, function(flab) {
+    file.path(sample_dir, sample, "sv_eval", flab, "fpfn.tsv") %>%
+      woofr::read_sv_fpfn_file()
+  }) %>%
+    dplyr::bind_rows()
+}
+
+read_sv_eval_files_sample <- function(sample) {
+
+  purrr::map(flabels_sv, function(flab) {
+    file.path(sample_dir, sample, "sv_eval", flab, "eval_metrics.tsv") %>%
+      woofr::read_sv_eval_file()
+  }) %>%
+    dplyr::bind_rows()
+}
+
+read_circos_sample <- function(sample) {
+  purrr::map(flabels_sv, function(flab) {
+    circos <- file.path(sample_dir, sample, "sv_eval", flab, glue("circos_{sample}.png"))
+    if (file.exists(circos)) {
+      tibble::tibble(sample = sample, flabel = flab, circos = circos)
+    } else {
+      tibble::tibble(sample = sample, flabel = flab, circos = NA_character_)
+    }
+  }) %>%
+    dplyr::bind_rows()
+}
+```
+
+```{r analysis_svs, eval=run_sv}
+sv_eval_res <- purrr::map(samples, read_sv_eval_files_sample) %>%
+  dplyr::bind_rows() %>%
+  dplyr::filter_all(dplyr::any_vars(!is.na(.))) %>% # keep rows with at least one non-NA
+  dplyr::arrange(Recall, Precision, sample, flabel)
+sv_fpfn_res <- purrr::map(samples, read_sv_fpfn_files_sample) %>%
+  dplyr::bind_rows() %>%
+  dplyr::filter_all(dplyr::any_vars(!is.na(.))) # keep rows with at least one non-NA
+sv_circos_res <- purrr::map(samples, read_circos_sample) %>%
+  dplyr::bind_rows() %>%
+  dplyr::left_join(sv_eval_res, by = c("sample", "flabel")) %>%
+  dplyr::filter(!is.na(circos)) %>%
+  dplyr::mutate(title = paste(sample, flabel)) %>%
+  dplyr::select(sample, flabel, title, circos, FP, FN) %>%
+  dplyr::arrange(desc(FP), desc(FN), sample, flabel)
+```
+
+```{r tab_descr_svs, eval=run_sv}
+sv_cap <- dplyr::tribble(
+  ~Column,    ~Description,
+  "run1",     run1,
+  "run2",     glue("{run2} (Truthset)"),
+  "FP",       "False Positive",
+  "FN",       "False Negative",
+  "TP",       "True Positive",
+  "Truth",    "TP + FN",
+  "Recall",   "TP / Truth",
+  "Precision", "TP / TP + FP") %>%
+  mutate(y = paste(Column, Description, sep = ": ")) %>%
+  pull(y)
+sv_cap <- htmltools::tags$caption(
+  htmltools::div(paste(sv_cap[1:4], collapse = "; ")),
+  htmltools::div(paste(sv_cap[5:length(sv_cap)], collapse = "; ")))
+```
+
+`r if (run_sv) { c("#### Comparison Table") }`
+
+```{r eval_tab_svs, eval=run_sv}
+sv_tpar <- list(
+  # scrollY should be 35px per row, with max of 580px.
+  scroll_y = 10 + min(nrow(sv_eval_res) * 35, 570),
+  bgsize = "90% 90%",
+  big_mark_cols = c("run1_count", "run2_count",
+                    "Truth", "TP", "FP", "FN"),
+  bar_colour = "#99ff99",
+  bar_range = c(0.97, 1))
+
+sv_eval_res %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames = FALSE, caption = sv_cap, class = "cell-border display compact",
+    filter = list(position = "top", clear = FALSE, plain = FALSE),
+    extensions = c("Scroller", "KeyTable"),
+    options = list(scroller = TRUE, scrollX = TRUE, scrollY = sv_tpar$scroll_y)) %>%
+  DT::formatStyle(
+    c("Recall", "Precision"),
+    background = DT::styleColorBar(sv_tpar$bar_range, color = sv_tpar$bar_colour),
+    backgroundSize = sv_tpar$bgsize, backgroundRepeat = 'no-repeat', backgroundPosition = 'center') %>%
+  DT::formatCurrency(sv_tpar$big_mark_cols, currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+`r if (run_sv) { c("#### FP/FN Table") }`
+`r if (run_sv) { c("Showing FP and FN SVs") }`
+
+```{r fpfn_sv_tab, eval=run_sv}
+sv_fpfn_tpar <- list(
+  # scrollY should be 35px per row, with max of 580px.
+  scroll_y = 10 + min(nrow(sv_fpfn_res) * 35, 570),
+  bgsize = "90% 90%",
+  big_mark_cols = c("pos1", "pos2"),
+  bar_colour = "#99ff99",
+  bar_range = c(0.97, 1))
+
+sv_fpfn_res %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames = FALSE, class = "cell-border display compact",
+    filter = list(position = "top", clear = FALSE, plain = FALSE),
+    extensions = c("Scroller", "KeyTable"),
+    options = list(scroller = TRUE, scrollX = TRUE,
+                   scrollY = sv_fpfn_tpar$scroll_y)) %>%
+  DT::formatStyle(
+    "FP_or_FN", backgroundColor = DT::styleEqual(c("fp", "fn"), c("#99ff99", "#FFCCCB"))) %>%
+  DT::formatCurrency(
+    sv_fpfn_tpar$big_mark_cols, currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+`r if (run_sv) { c("#### Circos Plots {.tabset .tabset-fade}") }`
+`r if (run_sv) { c("<span style='color:green'>Green</span> = False Positives;") }`
+`r if (run_sv) { c("<span style='color:red'>Red</span> = False Negatives") }`
+
+```{r circos_display, fig.width=5, fig.height=5, results="asis", eval=run_sv}
+x <- sv_circos_res %>%
+  dplyr::filter(FP > 0 | FN > 0)
+for (i in seq_len(nrow(x))) {
+  cat("\n##### ", paste(x$title[i], "\n"))
+  cat(glue('<img src="{x$circos[i]}" alt="{x$title[i]}" width="30%">'), "\n")
+  cat("\n***\n")
+}
+```
+
+`r if (run_cnv) { c("### Copy Number Variants {.tabset .tabset-fade}") }`
+
+```{r funcs_cnvs, eval=run_cnv}
+read_cnv_cn_diff <- function(sample) {
+  x <- file.path(sample_dir, sample, "cnv_eval/purple-gene_um/cn_diff.tsv")
+  if (!file.exists(x)) {
+    # return tibble of NAs
+    column_nms <- c("chrom", "start", "end", "gene",
+                    "min_cn.run1", "max_cn.run1", "min_cn.run2", "max_cn.run2",
+                    "min_diff", "max_diff")
+    res <- rep(NA, length(column_nms)) %>%
+      purrr::set_names(column_nms) %>%
+      as.list() %>%
+      dplyr::as_tibble()
+    return(res)
+  }
+
+  readr::read_tsv(x, col_types = "ciicddddcc") %>%
+    dplyr::mutate(sample = sample) %>%
+    dplyr::select(sample, everything())
+}
+
+read_cnv_coord_diff <- function(sample) {
+  x <- file.path(sample_dir, sample, "cnv_eval/purple-gene_um/coord_diff.tsv")
+  if (!file.exists(x)) {
+    # return tibble of NAs
+    column_nms <- c("fp_or_fn", "chrom", "start", "end", "gene", "min_cn", "max_cn")
+    res <- rep(NA, length(column_nms)) %>%
+      purrr::set_names(column_nms) %>%
+      as.list() %>%
+      dplyr::as_tibble()
+    return(res)
+  }
+
+  readr::read_tsv(x, col_types = "cciicdd") %>%
+    dplyr::mutate(sample = sample) %>%
+    dplyr::select(sample, everything())
+}
+```
+
+`r if (run_cnv) { c("#### CopyNumber Diffs") }`
+
+```{r cnv_cn_diff, eval=run_cnv}
+umccr_genes <-
+  system.file("extdata/genes/umccr_cancer_genes.latest.genes", package = "woofr") %>%
+  readr::read_lines()
+
+cnv_cn_diff_res <-
+  purrr::map(samples, read_cnv_cn_diff) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate(
+    mincn_1_2 = paste0(min_cn.run1, "/", min_cn.run2),
+    maxcn_1_2 = paste0(max_cn.run1, "/", max_cn.run2),
+    mincn_diff = round(abs(min_cn.run1 - min_cn.run2), 1),
+    maxcn_diff = round(abs(max_cn.run1 - max_cn.run2), 1),
+    in_umccr = ifelse(gene %in% umccr_genes, "TRUE", "FALSE")) %>%
+  dplyr::select(sample, gene, in_umccr,
+                min_isdiff = min_diff, max_isdiff = max_diff,
+                mincn_1_2, maxcn_1_2, mincn_diff, maxcn_diff, chrom, start, end)
+
+cnv_cn_tpar <- list(
+  # scrollY should be 35px per row, with max of 580px.
+  scroll_y = 10 + min(nrow(cnv_cn_diff_res) * 35, 570),
+  big_mark_cols = c("start", "end"))
+
+cnv_cn_diff_res %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames = FALSE, class = "cell-border display compact",
+    caption = paste0("Differences in Copy Number (threshold: 0.1)"),
+    filter = list(position = "top", clear = FALSE, plain = FALSE),
+    extensions = c("Scroller", "KeyTable"),
+    options = list(scroller = TRUE, scrollX = TRUE,
+                   scrollY = cnv_cn_tpar$scroll_y)) %>%
+  DT::formatStyle(
+    c("min_isdiff", "max_isdiff", "in_umccr"), backgroundColor = DT::styleEqual(c("TRUE"), c("#FFCCCB"))) %>%
+  DT::formatCurrency(
+    cnv_cn_tpar$big_mark_cols, currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+`r if (run_cnv) { c("#### Coordinate Diffs") }`
+
+```{r cnv_coord_diff, eval=run_cnv}
+purrr::map(samples, read_cnv_coord_diff) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames = FALSE, class = "cell-border display compact",
+    filter = list(position = "top", clear = FALSE, plain = FALSE),
+    extensions = c("Scroller", "KeyTable"),
+    options = list(scroller = TRUE, scrollX = TRUE,
+                   scrollY = 150)) %>%
+  DT::formatCurrency(
+    c("start", "end"), currency = "", interval = 3, mark = ",", digits = 0)
+```
+
+## Methods {.tabset .tabset-fade}
+
+Here we're comparing the output from two bcbio runs:
+
+- __Run1__: `r run1`
+- __Run2__ (_"truthset"_): `r run2`
+
+* The comparison of VCFs has been done using the `compare` module of [woof](https://github.com/pdiakumis/woof).
+* The `Rmd` template used to generate this report is available in [woofr](https://github.com/pdiakumis/woofr).
+
+### SNVs/INDELs
+
+- split into PASS and ALL variants
+- run `bcftools isec` to generate VCFs containing variants that are:
+  - False Positives (FPs): within Run1, but not Truthset (`0000.vcf`)
+  - False Negatives (FNs): within Truthset, but not Run1 (`0001.vcf`)
+  - True Positives (TPs): within _both_ Run1 and Truthset (`0002.vcf`)
+  - Results are in: `woof/final/samples/<sample>/snv_bcftools_isec/<file_label>/<pass-or-all>`
+- count how many variants are in each VCF using `wc -l`
+- run `eval_vcf` function in <https://github.com/umccr/vcf_stuff/>
+  to generate a summary table with evaluation statistics
+  - Results are in: `woof/final/samples/<sample>/snv_eval/<file_label>/<pass-or-all>`
+
+### Diagram
+
+```{r graph1, fig.height=7}
+set.seed(42)
+
+ndf <-
+  tribble(
+    ~id, ~label, ~type,
+    1, "snv1", "file-initial",
+    2, "snv2", "file-initial",
+    3, "bcftools-view-f", "command",
+    4, "vcf1_pass", "file",
+    5, "vcf2_pass", "file",
+    6, "bcftools-isec", "command",
+    7, "FP-FN-TP", "file",
+    8, "FP-FN-TP_pass", "file",
+    9, "count-vars", "command",
+    10, "counts", "file",
+    11, "counts_pass", "file",
+    12, "eval-vcf", "command") %>%
+  mutate(
+    shape = case_when(
+      type == "file" ~ "rectangle",
+      type == "command" ~ "circle",
+      TRUE ~ "square"
+    ),
+    fillcolor = case_when(
+      type == "file" ~ "lightblue",
+      type == "command" ~ "#f48f42",
+      TRUE ~ "#eef442"
+    ),
+    fontcolor = "black")
+
+edf <-
+  create_edge_df(
+    from = c(1, 2, 3, 3, 1, 2, 4, 5, 6, 6, 1, 2, 4, 5, 9, 9, 7, 8, 10, 11),
+    to =   c(3, 3, 4, 5, 6, 6, 6, 6, 7, 8, 9, 9, 9, 9, 10, 11, 12, 12, 12, 12)
+  )
+
+
+create_graph(nodes_df = ndf, edges_df = edf) %>%
+  set_node_attrs(
+    node_attr = "fontsize",
+    values = "8"
+  ) %>%
+  render_graph()
+```
+
+### Structural Variants
+
+- keep only `PASS`ed variants from Run1 and Run2
+- generate
+  - number of SVs in Run1
+  - number of SVs in Run2
+  - FP variants: within Run1, but not Truthset
+  - FN variants: within Truthset, but not Run1
+- generate one circos plot per sample, where:
+  - FN in red
+  - FP in green
+
+### Copy Number Variants
+
+- check if gene number and coordinates are identical between runs
+- check which genes have a difference in Min/Max copy number greater than 0.5
+
+## Addendum {.tabset .tabset-fade}
+
+### Conda Pkgs
+
+```{r conda_list_main, warning=FALSE}
+conda_pkgs <-
+  readr::read_table2(
+    file.path(woof_final, "conda", "conda_pkg_list.txt"),
+    col_names = c("name", "version", "build", "channel", "env"),
+    col_types = "ccccc") %>%
+  dplyr::mutate(channel = ifelse(channel == "woof", NA_character_, channel),
+                env = ifelse(is.na(env), "woof", env)) %>%
+  dplyr::arrange(name)
+main_pkgs <- c(
+  "^htslib$", "^ngs",
+  "pandoc", "^python$",
+  "^r-base$", "cromwell",
+  "bcftools", "samtools",
+  "^woof$", "^r-rock$", "^r-woofr$") %>%
+  paste(collapse = "|")
+conda_pkgs %>%
+  dplyr::mutate(main_pkgs = ifelse(grepl(main_pkgs, name), "A", "B")) %>%
+  dplyr::arrange(main_pkgs, desc(name)) %>%
+  dplyr::select(name, version, build, channel) %>%
+  DT::datatable(filter = list(position = "top", clear = FALSE, plain = TRUE),
+                class = "cell-border display compact",
+                rownames = FALSE, extensions = c("Scroller", "KeyTable"),
+                options = list(scroller = TRUE, scrollX = TRUE, scrollY = 300,
+                               dom = 'lfrtip'))
+```
+
+### Report Inputs
+
+```{r report_inputs}
+dplyr::tibble(key = names(params), value = unlist(params)) %>%
+  knitr::kable(format = "html") %>%
+  kableExtra::kable_styling(full_width = FALSE, position = "left") %>%
+  kableExtra::column_spec(1, bold = TRUE) %>%
+  kableExtra::scroll_box(height = "200px")
+```
+
+### R Session Info
+
+```{r session_info}
+si <- devtools::session_info(include_base = TRUE)
+unclass(si$packages) %>%
+  dplyr::as_tibble() %>%
+  dplyr::mutate(main_pkgs = ifelse(package %in% c("woofr", "rock", "base"), "A", "B")) %>%
+  dplyr::arrange(main_pkgs, package) %>%
+  dplyr::select(package, version = ondiskversion, path, datestamp = date) %>%
+  knitr::kable(format = "html") %>%
+  kableExtra::kable_styling(full_width = TRUE, position = "left") %>%
+  kableExtra::column_spec(1, bold = TRUE) %>%
+  kableExtra::scroll_box(height = "400px")
+```
+
+
+***
+
+<p>&nbsp;</p>

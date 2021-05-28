@@ -2,7 +2,8 @@
 // Silently enable DSL2
 nextflow.enable.dsl = 2
 
-// Import workflows
+// Import modules, workflows
+include { module_compile_report } from './modules/compile_report.nf'
 include { workflow_copy_number_variants } from './subworkflows/copy_number_variants.nf'
 include { workflow_small_variants } from './subworkflows/small_variants.nf'
 include { workflow_structural_variants } from './subworkflows/structural_variants.nf'
@@ -18,7 +19,11 @@ run_dir_two = file('data/1.0.4/COLO829/WGS/2020-01-18/umccrised/COLO829_1__Colo8
 (ch_cnv, ch_smlv, ch_sv) = discover_inputs(run_dir_one, run_dir_two)
 
 workflow {
+  // Run comparisons
   workflow_copy_number_variants(ch_cnv)
   workflow_small_variants(ch_smlv)
   workflow_structural_variants(ch_sv)
+
+  // Compile report
+  //module_compile_report()
 }
