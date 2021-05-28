@@ -11,8 +11,8 @@ include { workflow_structural_variants } from './subworkflows/structural_variant
 include { discover_inputs } from './lib/utility.groovy'
 
 // Set inputs
-run_dir_one = file('data/1.0.3-rc.11/CUP-Pairs8/')
-run_dir_two = file('data/1.2.0/CUP-Pairs8/')
+run_dir_one = file('data/1.0.3-rc.3/COLO829/WGS/2020-01-18/umccrised/COLO829_1__Colo829')
+run_dir_two = file('data/1.0.4/COLO829/WGS/2020-01-18/umccrised/COLO829_1__Colo829')
 
 // Discover inputs
 (ch_cnv, ch_smlv, ch_sv) = discover_inputs(run_dir_one, run_dir_two)
