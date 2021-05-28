@@ -1,3 +1,4 @@
+# https://github.com/pdiakumis/woof/blob/c4893f0689200c611e5d2774313413c7432586f4/setup.py#L33
 #MIT License
 #
 #Copyright (c) 2019 Peter Diakumis
