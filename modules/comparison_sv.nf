@@ -5,12 +5,14 @@ process module_sv_comparison {
   tuple path('1.vcf.gz'), path('2.vcf.gz')
 
   output:
-  path('circos')
+  path('circos/*')
   path('eval_metrics.tsv')
   path('fpfn.tsv')
 
   script:
   """
-  comparison_sv.py --vcf_1 1.vcf.gz --vcf_2 2.vcf.gz
+  comparison_sv.py \
+    --vcf_1 1.vcf.gz \
+    --vcf_2 2.vcf.gz
   """
 }

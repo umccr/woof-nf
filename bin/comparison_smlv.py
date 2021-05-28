@@ -10,6 +10,8 @@ import shared
 
 def get_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--file_type', required=True,
+            help='Name of file type')
     parser.add_argument('--vcf_1', required=True, type=pathlib.Path,
             help='Input VCF (one) filepath')
     parser.add_argument('--vcf_2', required=True, type=pathlib.Path,
@@ -39,7 +41,7 @@ def main():
         args.vcf_1,
         args.vcf_2,
         args.vcf_3,
-        'output.tsv',
+        f'{args.file_type}.tsv',
         'TEMP_sample_name',
         'TEMP_file_label',
         'TEMP_subset'
