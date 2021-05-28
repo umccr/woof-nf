@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import pathlib
+import textwrap
+
+
+import shared
 
 
 def get_arguments():
@@ -21,11 +25,18 @@ def main():
     # Get command line arguments
     args = get_arguments()
 
-    # Read in files and prepare data
-    #  - woofr::read_purple_gene_file (called from woofr::compare_purple_gene_files)
-    # Make comparison
-    #  - woofr::compare_purple_gene_files
-    # Write result
+    # Run process
+    woofr_source_fp = shared.get_woofr_source_fp()
+    rscript = textwrap.dedent(f'''
+        source('{woofr_source_fp}')
+        compare_purple_gene_files(
+            '{args.tsv_1}',
+            '{args.tsv_2}',
+            'cn_diff.tsv',
+            'cn_diff_coord.tsv'
+        )
+    ''')
+    shared.execute_command(f'R --vanilla <<EOF\n{rscript}\nEOF')
 
 
 if __name__ == '__main__':

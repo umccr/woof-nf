@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import pathlib
+import textwrap
+import sys
+
+
+import shared
 
 
 def get_arguments():
@@ -25,9 +30,20 @@ def main():
     # Get command line arguments
     args = get_arguments()
 
-    # Read in files and prepare data
-    # Make comparison
-    # Write result
+    # Import woof python code
+    sys.path.insert(0, str(shared.get_lib_path()))
+    import woof_compare
+
+    # Run process
+    woof_compare.eval(
+        args.vcf_1,
+        args.vcf_2,
+        args.vcf_3,
+        'output.tsv',
+        'TEMP_sample_name',
+        'TEMP_file_label',
+        'TEMP_subset'
+    )
 
 
 if __name__ == '__main__':
