@@ -19,6 +19,21 @@ run_dir_two = file('data/1.0.4/COLO829/WGS/2020-01-18/umccrised/COLO829_1__Colo8
 (ch_cnv, ch_smlv, ch_sv) = discover_inputs(run_dir_one, run_dir_two)
 
 workflow {
+  // TODO: allow multiple samples as input
+  // This can be achieved in different ways - not yet entirely clear which is best
+  // I think understanding of this will required examining real-work output of umccrise, which
+  // may properly come about running umccrise myself. For now, we can implement best-guest
+  // placeholder logic:
+  //    * two variables: string glob or array thereof; one for each 'run'
+  //    * optional sample alias, otherwise infer sample from directory/file names
+  //    * require matching of (1) run alias or (2) inferred sample name (allow fallback)
+  //    * then perform discovery as done above
+  // One other thought: given the Groovy/Java has some disadvantages relative to python in
+  // this context, it could be benefical to offload discovery/input processing logic into a
+  // python script, which could wrap this pipeline. Though for that to work nicely, I would
+  // want to faithfully stream nextflow stdout to console via subprocess - not sure this
+  // is possible; investigate
+
   // Run comparisons
   workflow_copy_number_variants(ch_cnv)
   workflow_small_variants(ch_smlv)
