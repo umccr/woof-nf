@@ -13,7 +13,10 @@ include { process_inputs } from './lib/utility.groovy'
 
 // Read input files from disk
 // TODO: expose to config and cli
-inputs_fp = file('testing/inputs.tsv')
+if (! params.inputs_fp) {
+    exit 1, "error: got bad inputs_fp argument"
+}
+inputs_fp = file(params.inputs_fp)
 input_files = inputs_fp
   .readLines()[1..-1]
   .collect { it.split('\t') }

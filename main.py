@@ -41,10 +41,10 @@ def main():
 
     # Get inputs and write to file
     input_list = get_inputs(args.run_dir_one, args.run_dir_two)
-    write_inputs(input_list, 'testing/inputs.tsv')
+    inputs_fp = write_inputs(input_list, 'testing/inputs.tsv')
 
     # Execute pipeline
-    run_pipeline(input_fp)
+    run_pipeline(inputs_fp)
 
 
 def get_inputs(dir_one, dir_two):
@@ -130,18 +130,19 @@ def compare_items(a, b, item_name, extra=''):
 
 def write_inputs(input_list, output_fp):
     header_tokens  = ('sample_name', 'file_type', 'file_source', 'run_number', 'filepath')
-    input_fp = pathlib.Path(output_fp)
-    with input_fp.open('w') as fh:
+    inputs_fp = pathlib.Path(output_fp)
+    with inputs_fp.open('w') as fh:
         print(*header_tokens, sep='\t', file=fh)
         for input_entry in input_list:
             print(*input_entry, sep='\t', file=fh)
+    return inputs_fp
 
 
-def run_pipeline(input_fp):
+def run_pipeline(inputs_fp):
     # Start
+    print('info: running pipeline')
     p = subprocess.Popen(
-        './pipeline.nf',
-        f'--input_fp {input_fp}',
+        f'./pipeline.nf --inputs_fp {inputs_fp}',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -149,12 +150,14 @@ def run_pipeline(input_fp):
         universal_newlines=True,
     )
     # Stream output to terminal, replicating behaviour
+    # Alert user nextflow output incoming
+    sys.stdout.write('info: pipeline output:\n\n')
     # Print initial block (block delimiter as an empty newline)
     displayed_lines = 0
     for line in p.stdout:
         if line == '\n':
             break
-        sys.stdout.write(line)
+        sys.stdout.write(f'  {line}')
         displayed_lines += 1
     lines_rewrite = displayed_lines - 2
     # For each new block, rewrite all but first two lines
@@ -172,9 +175,10 @@ def run_pipeline(input_fp):
             lines = list()
         else:
             # In block
-            lines.append(line)
+            lines.append(f'  {line}')
     # Block until pipeline process exits
     p.wait()
+    print('\ninfo: pipeline complete')
 
 
 if __name__ == '__main__':
