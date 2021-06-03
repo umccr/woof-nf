@@ -37,13 +37,9 @@ workflow workflow_small_variants {
     ch_smlv_intersects = module_smlv_intersect(ch_smlv_prepared)
 
     // Make SNV comparison
-    // Format: [vcf_type, vcf_1, vcf_2, vcf_3]
+    // Format: [vcf_type, flags, vcf_1, vcf_2, vcf_3]
     module_smlv_comparison(
-        ch_smlv_intersects.map {
-            d = it.flatten();
-            d.remove(1);
-            return d
-        }
+        ch_smlv_intersects.map { it.flatten() }
     )
 
     // Create channels for counting
