@@ -12,7 +12,6 @@ include { workflow_structural_variants } from './subworkflows/structural_variant
 include { process_inputs } from './lib/utility.groovy'
 
 // Read input files from disk
-// TODO: expose to config and cli
 if (! params.inputs_fp) {
     exit 1, "error: got bad inputs_fp argument"
 }
