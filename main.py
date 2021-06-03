@@ -34,10 +34,7 @@ def main():
 
     # Get inputs and write to file
     input_list = get_inputs(args.run_dir_one, args.run_dir_two)
-    input_fp = pathlib.Path('testing/inputs.tsv')
-    with input_fp.open('w') as fh:
-        for input_entry in input_list:
-            print(*input_entry, sep='\t', file=fh)
+    write_inputs(input_list, 'testing/inputs.tsv')
 
     # Execute pipeline
     run_pipeline(input_fp)
@@ -121,6 +118,15 @@ def compare_items(a, b, item_name, extra=''):
         if no_match_two:
             nmatch_two_strs = [f'\t- {name} (second run only)' for name in no_match_two]
             print(*nmatch_two_strs, sep='\n', file=sys.stderr)
+
+
+def write_inputs(input_list, output_fp):
+    header_tokens  = ('sample_name', 'file_type', 'run_number', 'filepath')
+    input_fp = pathlib.Path(output_fp)
+    with input_fp.open('w') as fh:
+        print(*header_tokens, sep='\t', file=fh)
+        for input_entry in input_list:
+            print(*input_entry, sep='\t', file=fh)
 
 
 def run_pipeline(input_fp):
