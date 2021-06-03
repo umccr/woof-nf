@@ -1,8 +1,8 @@
 process module_sv_comparison {
-  publishDir "${params.output_dir}/structural_variants/"
+  publishDir "${params.output_dir}/${sample_name}/structural_variants/"
 
   input:
-  tuple path('1.vcf.gz'), path('2.vcf.gz')
+  tuple val(sample_name), path('1.vcf.gz'), path('2.vcf.gz')
 
   output:
   path('circos/*')
@@ -12,6 +12,8 @@ process module_sv_comparison {
   script:
   """
   comparison_sv.py \
+    --sample_name "${sample_name}" \
+    --file_source "${sample_name}_TEMP_FILESOURCE" \
     --vcf_1 1.vcf.gz \
     --vcf_2 2.vcf.gz
   """

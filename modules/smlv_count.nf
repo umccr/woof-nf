@@ -2,10 +2,10 @@ process module_smlv_count {
   container 'public.ecr.aws/amazonlinux/amazonlinux:latest'
 
   input:
-  tuple val(vcf_type), val(flags), path(vcf)
+  tuple val(sample_name), val(vcf_type), val(flags), path(vcf)
 
   output:
-  path('*tsv')
+  tuple val(sample_name), path('*tsv')
 
   script:
   source = (flags & FlagBits.FILTERED) ? 'input' : 'filtered'

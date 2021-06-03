@@ -10,6 +10,8 @@ import shared
 
 def get_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--sample_name', required=True,
+            help='Sample name')
     parser.add_argument('--file_type', required=True,
             help='Name of file type')
     parser.add_argument('--source', required=True,
@@ -44,7 +46,7 @@ def main():
         args.vcf_2,
         args.vcf_3,
         f'{args.file_type}.tsv',
-        'TEMP_sample_name',
+        args.sample_name,
         args.file_type,
         args.source
     )

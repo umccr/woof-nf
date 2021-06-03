@@ -20,7 +20,7 @@ def process_inputs(input_files) {
     // Sort into appropriate list
     if (variant_type  == 'copy_number_variants') {
       inputs_cnv << [sample_name, file_source, flags, filepath]
-    } else if (variant_type = 'small_variants') {
+    } else if (variant_type == 'small_variants') {
       inputs_smlv << [sample_name, file_source, flags, filepath]
     } else if (variant_type == 'structural_variants') {
       inputs_sv << [sample_name, file_source, flags, filepath]
@@ -61,11 +61,11 @@ def locate_vcf_indices(inputs) {
 def prepare_smlv_channel(ch_vcfs) {
   // Pair and correctly order VCFs and indices
   // Input and filtered VCFs must be split first to group correctly
-  // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
+  // Format: [sample_name, vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
   ch_vcfs_split = ch_vcfs
     .branch {
-      input: ! (it[1] & FlagBits.FILTERED)
-      filtered: it[1] & FlagBits.FILTERED
+      input: ! (it[2] & FlagBits.FILTERED)
+      filtered: it[2] & FlagBits.FILTERED
     }
   ch_vcfs_paired_input = pair_vcf_and_indices(ch_vcfs_split.input)
   ch_vcfs_paired_filtered = pair_vcf_and_indices(ch_vcfs_split.filtered)
@@ -74,15 +74,16 @@ def prepare_smlv_channel(ch_vcfs) {
 
 def pair_vcf_and_indices(ch_vcf_and_indices) {
   // Pair and correctly order VCFs and indices
-  // Format: [vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
+  // Format: [sample_name, vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
   ch_result = ch_vcf_and_indices
-    .groupTuple()
-    .map { vcf_type, flags, vcfs, vcf_indices ->
+    .groupTuple(by: [0, 1])
+    .map { sample_name, vcf_type, flags, vcfs, vcf_indices ->
       // Get index of first and second file
       (index_one, index_two) = get_file_order(flags)
       // Check flags are consistent
       check_flag_consistency(flags)
       return [
+        sample_name,
         vcf_type,
         flags[index_one],
         vcfs[index_one],
@@ -97,12 +98,14 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
 def pair_files(ch_files) {
   ch_result = ch_files
     .groupTuple()
-    .map { input_type, flags, files ->
+    .map { sample_name, input_types, flags, files ->
       // Get index of first and second file
       (index_one, index_two) = get_file_order(flags)
-      // Check flags are consistent
+      // Check data is consistent
       check_flag_consistency(flags)
+      assert input_types.unique().size() == 1
       return [
+        sample_name,
         files[index_one],
         files[index_two],
       ]

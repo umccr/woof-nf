@@ -9,6 +9,10 @@ import shared
 
 def get_arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--sample_name', required=True, type=str,
+            help='Sample name')
+    parser.add_argument('--file_source', required=True, type=str,
+            help='File source')
     parser.add_argument('--vcf_1', required=True, type=pathlib.Path,
             help='Input VCF (one) filepath')
     parser.add_argument('--vcf_2', required=True, type=pathlib.Path,
@@ -27,24 +31,22 @@ def main():
 
     # Run process
     woofr_source_fp = shared.get_woofr_source_fp()
-    sample_name = 'TEMP_sample_name'
-    file_label = 'TEMP_filelabel'
     rscript = textwrap.dedent(f'''
         source('{woofr_source_fp}')
         v.isec <- manta_isec(
             '{args.vcf_1}',
             '{args.vcf_2}',
-            '{sample_name}',
-            '{file_label}'
+            '{args.sample_name}',
+            '{args.file_source}'
         )
         v.stats <- manta_isec_stats(
             v.isec,
-            '{sample_name}',
-            '{file_label}'
+            '{args.sample_name}',
+            '{args.file_source}'
         )
         get_circos(
             v.isec,
-            '{sample_name}',
+            '{args.sample_name}',
             './circos/'
         )
         v.fpfn <- dplyr::bind_rows(
