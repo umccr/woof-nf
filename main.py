@@ -13,6 +13,13 @@ umccrise_inputs = {
     'purple': ['purple', '.purple.cnv.gene.tsv']
 }
 
+file_types = {
+    'cpsr': 'small_variants',
+    'pcgr': 'small_variants',
+    'manta': 'structural_variants',
+    'purple': 'copy_number_variants'
+}
+
 
 def get_arguments():
     parser = argparse.ArgumentParser()
@@ -95,10 +102,11 @@ def match_inputs(inputs_one, inputs_two):
         compare_items(files_one, files_two, 'file', f' in {sample_name}')
         # Push matches into new variable
         files_matched = files_one & files_two
-        for file_type in files_matched:
+        for file_source in files_matched:
+            file_type = file_types[file_source]
             inputs_matched.extend((
-                (sample_name, file_type, 'first', inputs_one[sample_name][file_type]),
-                (sample_name, file_type, 'second', inputs_two[sample_name][file_type])
+                (sample_name, file_type, file_source, 'first', inputs_one[sample_name][file_source]),
+                (sample_name, file_type, file_source, 'second', inputs_two[sample_name][file_source])
             ))
     return inputs_matched
 
@@ -121,7 +129,7 @@ def compare_items(a, b, item_name, extra=''):
 
 
 def write_inputs(input_list, output_fp):
-    header_tokens  = ('sample_name', 'file_type', 'run_number', 'filepath')
+    header_tokens  = ('sample_name', 'file_type', 'file_source', 'run_number', 'filepath')
     input_fp = pathlib.Path(output_fp)
     with input_fp.open('w') as fh:
         print(*header_tokens, sep='\t', file=fh)

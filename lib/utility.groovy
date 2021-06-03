@@ -1,37 +1,31 @@
 import java.nio.file.Paths
 
-// Format: [input_name, [subdirectory_path, regex_selector]]
-input_file_locations = [
-  'cpsr': ['small_variants', ~/^.+-germline\.predispose_genes\.vcf\.gz$/],
-  'pcgr': ['small_variants', ~/^.+-somatic-PASS\.vcf\.gz$/],
-  'manta': ['structural', ~/^.+-manta\.vcf\.gz$/],
-  'purple': ['purple', ~/^.+\.purple\.cnv\.gene\.tsv$/],
-]
-
-def discover_inputs(dir_one, dir_two) {
-  // Locate inputs files in each input directory (as defined in `input_file_locations`)
-  inputs_one = discover_inputs_in_dir(dir_one)
-  inputs_two = discover_inputs_in_dir(dir_two)
+def process_inputs(input_files) {
   // Collate input files, include only if comparison is possible otherwise warn
   inputs_cnv = []
   inputs_smlv = []
   inputs_sv = []
-  input_file_locations.keySet().each { k ->
-    if (inputs_one[k] == null | inputs_two[k] == null) {
-      // Warn
+  input_files.each { d ->
+    // Unpack and cast here; error raises while trying to unpack in closure params
+    (sample_name, variant_type, file_source, run_number, filepath) = d
+    filepath = file(filepath)
+    // Get flags (position/run one or two)
+    if (run_number == 'first') {
+      flags = 0
+    } else if (run_number == 'second') {
+      flags = FlagBits.PTWO
     } else {
-      if (k == 'purple') {
-        inputs_cnv << [k, 0, inputs_one[k]]
-        inputs_cnv << [k, FlagBits.PTWO, inputs_two[k]]
-      } else if (k == 'cpsr' | k == 'pcgr') {
-        inputs_smlv << [k, 0, inputs_one[k]]
-        inputs_smlv << [k, FlagBits.PTWO, inputs_two[k]]
-      } else if (k == 'manta') {
-        inputs_sv << [k, 0, inputs_one[k]]
-        inputs_sv << [k, FlagBits.PTWO, inputs_two[k]]
-      } else {
-        assert false
-      }
+     assert false
+    }
+    // Sort into appropriate list
+    if (variant_type  == 'copy_number_variants') {
+      inputs_cnv << [sample_name, file_source, flags, filepath]
+    } else if (variant_type = 'small_variants') {
+      inputs_smlv << [sample_name, file_source, flags, filepath]
+    } else if (variant_type == 'structural_variants') {
+      inputs_sv << [sample_name, file_source, flags, filepath]
+    } else {
+      assert false
     }
   }
   // Check for existing VCF indices
@@ -44,48 +38,19 @@ def discover_inputs(dir_one, dir_two) {
   ]
 }
 
-def discover_inputs_in_dir(directory) {
-  // Find all input files
-  input_filelist = [:]
-  input_file_locations.each { name, val ->
-    subdirectory = val[0]
-    regex = val[1]
-    input_filelist[name] = []
-    directory_fullpath = directory / subdirectory
-    if (directory_fullpath.exists()) {
-      (directory / subdirectory).eachFileMatch(groovy.io.FileType.FILES, regex, { input_filelist[name] << it })
-    }
-  }
-  // Unpack list of discovered input file as:
-  // input_filelist[my_key] = input_filepath
-  input_filelist.keySet().each { k ->
-    // Set key value to filepath itself or null if missing, or raise error where more than one file found
-    n_files = input_filelist[k].size()
-    if (n_files == 1) {
-      input_filelist[k] = input_filelist[k][0]
-    } else if (n_files == 0) {
-      input_filelist[k] = null
-    } else if (n_files > 1) {
-      filenames = input_filelist[k].join('\n')
-      regex = input_file_locations[k][1]
-      exit 1, "ERROR: expected zero or one file for $k but got $n_files with '$regex':\n\n$filenames"
-    }
-  }
-  return input_filelist
-}
 
 def locate_vcf_indices(inputs) {
   inputs.eachWithIndex { v, i ->
-    file = v[2]
+    file = v[3]
     if (file.toString().endsWith('.tsv')) {
       return
     }
     vcf_index = file + '.tbi'
     if (vcf_index.exists()) {
-      inputs[i][1] |= FlagBits.INDEXED
+      inputs[i][2] |= FlagBits.INDEXED
       inputs[i] << vcf_index
     } else {
-      inputs[i][1] &= ~FlagBits.INDEXED
+      inputs[i][2] &= ~FlagBits.INDEXED
       // NOTE: using Path instance to avoid NF restrictions on path() process inputs
       inputs[i] << Paths.get('NO_FILE')
     }
