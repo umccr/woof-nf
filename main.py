@@ -6,6 +6,10 @@ import subprocess
 import sys
 
 
+import log
+import dependencies
+
+
 umccrise_inputs = {
     'cpsr': ['small_variants', '-germline.predispose_genes.vcf.gz'],
     'pcgr': ['small_variants', '-somatic-PASS.vcf.gz'],
@@ -27,32 +31,178 @@ def get_arguments():
             help='Space separated list of run directories')
     parser.add_argument('--run_dir_two', required=True, nargs='+', type=pathlib.Path,
             help='Space separated list of run directories')
+    parser.add_argument('--output_dir', required=True, type=pathlib.Path,
+            help='Output directory')
     return parser.parse_args()
 
 
 def check_arguments(args):
-    pass
+    log.task_msg_title('Checking arguments')
+    log.task_msg_body('Not yet implemented - hold on to your seat!\n')
+    log.render('Free pass for now :)\n')
 
 
 def main():
+    # TODO: splash
+
+    # Print entry
+    # TODO: further description on what will be done
+    msg_body_text = (
+        'Welcome to the UMCCR comparison pipeline\n\n  Stay tuned, more info to come...\n'
+    )
+    log.task_msg_title('Starting comparison pipeline')
+    log.task_msg_body(msg_body_text)
+
+    # TODO: more version elsewhere
+    # TODO: allow user to set threads
+    import multiprocessing
+    log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
+    log.render('Info:')
+    log.render('  version: 0.0.1')
+    log.render(f'  threads: {multiprocessing.cpu_count()}\n')
+
     # Get and check command line arguments
     args = get_arguments()
     check_arguments(args)
+
+    # Check dependencies
+    dependencies.check()
 
     # Get inputs and write to file
     input_list = get_inputs(args.run_dir_one, args.run_dir_two)
     inputs_fp = write_inputs(input_list, 'testing/inputs.tsv')
 
     # Execute pipeline
-    run_pipeline(inputs_fp)
+    log.task_msg_title('Launching comparison workflow')
+    log.task_msg_body('See below for live update\n')
+    run_pipeline(inputs_fp, args.output_dir)
+    log.task_msg_title('Pipeline completed sucessfully! Goodbye')
 
 
 def get_inputs(dir_one, dir_two):
+    # Log directories to be searched
+    log.task_msg_title('Discovering input files')
+    log.task_msg_body(
+        'TODO: note basic approach and symbols\n'
+        '  e.g. symbols:\n'
+        '    green ticks found/matched\n'
+        '    grey ticks found but not matched/usable\n'
+        '    red cross not found/matched\n'
+    )
+    log.render('Directories searched:')
+    log_input_directories(dir_one, '1')
+    log_input_directories(dir_two, '2')
+    log.render_newline()
     # Discover all inputs
     inputs_one = discover_run_files(dir_one)
     inputs_two = discover_run_files(dir_two)
+
     # Match samples between runs and also input files
-    return match_inputs(inputs_one, inputs_two)
+    samples_matched, inputs_matched = match_inputs(inputs_one, inputs_two)
+    # Create and render table displaying results
+    matched_table = create_matched_table(inputs_one, inputs_two, samples_matched)
+    samples_all = set(inputs_one) | set(inputs_two)
+    log.render(f'Matched {len(samples_matched)} of {len(samples_all)} samples:')
+    render_matched_table(matched_table)
+    return inputs_matched
+
+
+def create_matched_table(inputs_one, inputs_two, samples_matched):
+    # NOTE: assuming all umccrise files; refactor will be required for extending to bcbio.
+    #       I will want to have separate sections for umccrise and bcbio match tables
+    file_columns = list(file_types.keys())
+    # Define symbols
+    tick_green = log.ftext('✓', c='green')
+    tick_grey = log.ftext('✓', c='black')
+    cross = log.ftext('⨯', c='red')
+    # Create rows for matched pairs
+    rows = list()
+    for sample in sorted(samples_matched):
+        # Only have sample appear on first line for matched pairs
+        row_one = [sample, '1', tick_green]
+        row_two = ['', '2', '']
+        for file_type in file_columns:
+            exist_one = file_type in inputs_one[sample]
+            exist_two = file_type in inputs_two[sample]
+            # Set symbol and symbol colour
+            if exist_one and not exist_two:
+                sym_one = tick_grey
+                sym_two = cross
+            elif not exist_one and exist_two:
+                sym_one = cross
+                sym_two = tick_grey
+            elif exist_one and exist_two:
+                sym_one = sym_two = tick_green
+            elif not exist_one and not exist_two:
+                sym_one = sym_two = cross
+            row_one.append(sym_one)
+            row_two.append(sym_two)
+        rows.append((row_one, row_two))
+    # Create rows for samples without matches
+    samples_no_matched = samples_matched ^ (set(inputs_one) | set(inputs_two))
+    for sample in samples_no_matched:
+        # Get appropriate set
+        row = [log.ftext(sample, c='red')]
+        if sample in inputs_one:
+            inputs = inputs_one
+            row.append('1')
+        elif sample in inputs_two:
+            inputs = inputs_two
+            row.append('2')
+        # Cross to indicate match status
+        row.append(cross)
+        for file_type in file_columns:
+            row.append(tick_green if file_type in inputs[sample] else cross)
+        rows.append((row, ))
+    return rows
+
+
+def render_matched_table(rows):
+    # Set header
+    file_columns = list(file_types.keys())
+    header_tokens = ('sample_name', 'set', 'matched', *file_columns)
+    # Min file column width; then set to header token
+    # Get column sizes
+    largest_sample = max(len(r[0]) for rs in rows for r in rs)
+    csize_first = largest_sample + (4 - largest_sample % 4)
+    csizes = [csize_first]
+    for file_type in ['set', 'matched', *file_columns]:
+        # Subtracting one for left-dominant centering on even lengths
+        if len(file_type) < 8:
+            csizes.append(8 - 1)
+        else:
+            csize = len(file_type) + (4 - len(file_type) % 4) - 1
+            csizes.append(csize)
+    # Render header
+    log.render('  ', end='')
+    for token, csize in zip(header_tokens, csizes):
+        log.render(log.ftext(token.center(csize), f='underline'), end='')
+    log.render_newline()
+    # Render rows
+    for row_set in rows:
+        for row in row_set:
+            # Adjust csize padding to account for ansi escape codes
+            # NOTE: some further considerations may be required here when log.ANSI_CODES = False
+            row_just = list()
+            column_number = 0
+            for csize, text in zip(csizes, row):
+                # Exclude second matched sample name from table; replace with empty space
+                column_number += 1
+                ansi_ec_size = len(text) - len(log.ANSI_ESCAPE.sub('', text))
+                csize += ansi_ec_size
+                if column_number == 1:
+                    row_just.append(text.ljust(csize))
+                else:
+                    row_just.append(text.center(csize))
+            row_text = ''.join(row_just)
+            log.render('  ' + row_text)
+    log.render_newline()
+
+
+def log_input_directories(dirpaths, n):
+    log.render(f'  set {n}:')
+    for dirpath in dirpaths:
+        log.render(f'    {dirpath}')
 
 
 def discover_run_files(dirpaths):
@@ -91,7 +241,6 @@ def match_inputs(inputs_one, inputs_two):
     samples_two = set(inputs_two.keys())
     compare_items(samples_one, samples_two, 'sample')
     samples_matched = samples_one & samples_two
-    print(f'info: matched {len(samples_matched)} samples', file=sys.stderr)
 
     # Check matched samples for matching inputs
     inputs_matched = list()
@@ -108,12 +257,12 @@ def match_inputs(inputs_one, inputs_two):
                 (sample_name, file_type, file_source, 'first', inputs_one[sample_name][file_source]),
                 (sample_name, file_type, file_source, 'second', inputs_two[sample_name][file_source])
             ))
-    return inputs_matched
+    return samples_matched, inputs_matched
 
 
 def compare_items(a, b, item_name, extra=''):
     no_match = a ^ b
-    if no_match:
+    if no_match and log.VERBOSITY >= 3:
         plurality = f'{item_name}s' if len(no_match) > 1 else item_name
         msg = f'warning: no match found for {len(no_match)} {plurality}{extra}:'
         print(msg, file=sys.stderr)
@@ -138,11 +287,10 @@ def write_inputs(input_list, output_fp):
     return inputs_fp
 
 
-def run_pipeline(inputs_fp):
+def run_pipeline(inputs_fp, output_dir):
     # Start
-    print('info: running pipeline')
     p = subprocess.Popen(
-        f'./pipeline.nf --inputs_fp {inputs_fp}',
+        f'./pipeline.nf --inputs_fp {inputs_fp} --output_dir {output_dir}',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -150,15 +298,16 @@ def run_pipeline(inputs_fp):
         universal_newlines=True,
     )
     # Stream output to terminal, replicating behaviour
-    # Alert user nextflow output incoming
-    sys.stdout.write('info: pipeline output:\n\n')
+    log.render('Nextflow output:')
     # Print initial block (block delimiter as an empty newline)
     displayed_lines = 0
     for line in p.stdout:
         if line == '\n':
             break
-        sys.stdout.write(f'  {line}')
+        sys.stdout.write(f'    {line}')
         displayed_lines += 1
+    sys.stdout.write('\n')
+    displayed_lines += 1
     lines_rewrite = displayed_lines - 2
     # For each new block, rewrite all but first two lines
     lines = list()
@@ -170,15 +319,14 @@ def run_pipeline(inputs_fp):
             # Clear to end of terminal
             sys.stdout.write('\u001b[0J')
             # Write new lines, prepare for next block
-            sys.stdout.write(''.join(lines))
-            lines_rewrite = len(lines)
+            print(''.join(lines))
+            lines_rewrite = len(lines) + 1
             lines = list()
         else:
             # In block
-            lines.append(f'  {line}')
+            lines.append(f'    {line}')
     # Block until pipeline process exits
     p.wait()
-    print('\ninfo: pipeline complete')
 
 
 if __name__ == '__main__':
