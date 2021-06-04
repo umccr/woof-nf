@@ -70,7 +70,7 @@ def main():
 
     # Get inputs and write to file
     input_list = get_inputs(args.run_dir_one, args.run_dir_two)
-    inputs_fp = write_inputs(input_list, 'testing/inputs.tsv')
+    inputs_fp = write_inputs(input_list, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
     log.task_msg_title('Launching comparison workflow')
@@ -278,6 +278,11 @@ def compare_items(a, b, item_name, extra=''):
 
 
 def write_inputs(input_list, output_fp):
+    # Create output directory if it does not already exist
+    output_dir = output_fp.parent
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+    # Write file
     header_tokens  = ('sample_name', 'file_type', 'file_source', 'run_number', 'filepath')
     inputs_fp = pathlib.Path(output_fp)
     with inputs_fp.open('w') as fh:
