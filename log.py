@@ -60,7 +60,7 @@ def ftext(text, c=None, f=None):
 
 def render(text, ts=False, **kargs):
     if ts:
-        text = f'{get_timestamp()} {text}'
+        text = f'{text} {get_timestamp()}'
     if NO_ANSI:
         print(ANSI_ESCAPE.sub('', text), **kargs)
     else:
