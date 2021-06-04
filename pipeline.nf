@@ -11,10 +11,15 @@ include { workflow_structural_variants } from './subworkflows/structural_variant
 // Import utility
 include { process_inputs } from './lib/utility.groovy'
 
-// Read input files from disk
+// Check configuration
 if (! params.inputs_fp) {
     exit 1, "error: got bad inputs_fp argument"
 }
+if (! params.output_dir) {
+    exit 1, "error: got bad output_dir argument"
+}
+
+// Read input files from disk
 inputs_fp = file(params.inputs_fp)
 input_files = inputs_fp
   .readLines()[1..-1]
