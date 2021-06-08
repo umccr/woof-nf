@@ -521,7 +521,7 @@ get_circos <- function(mi, samplename, outdir) {
     message(glue::glue("Copying circos templates to '{outdir}'"))
     file.copy(system.file("templates/circos/hg38/circos_sv.conf", package = "pebbles"),
               file.path(outdir, "circos.conf"), overwrite = TRUE)
-    file.copy(system.file("templates/circos/hg38/gaps_hg38.txt", package = "pebbles"),
+    file.copy(system.file("templates/circos/hg38/gaps.txt", package = "pebbles"),
               outdir, overwrite = TRUE)
     file.copy(system.file("templates/circos/hg38/ideogram.conf", package = "pebbles"),
               outdir, overwrite = TRUE)
