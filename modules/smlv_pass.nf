@@ -14,7 +14,7 @@ process module_smlv_pass {
   flags_out = (flags_in & ~FlagBits.INDEXED)
   flags_out = (flags_out ^ FlagBits.FILTERED)
   run = (flags_in & FlagBits.PTWO) ? 'second' : 'first'
-  filename = "${run}__${vcf_type}__filtered__${vcf.getSimpleName()}"
+  filename = "${vcf_type}__${run}__filtered__${vcf.getSimpleName()}"
   """
   {
     bcftools view -h "${vcf}";
