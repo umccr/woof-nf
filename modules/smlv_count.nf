@@ -8,7 +8,7 @@ process module_smlv_count {
   tuple val(sample_name), path('*tsv')
 
   script:
-  source = (flags & FlagBits.FILTERED) ? 'input' : 'filtered'
+  source = (flags & FlagBits.FILTERED) ? 'filtered' : 'input'
   run = (flags & FlagBits.PTWO) ? 'second' : 'first'
   uuid = UUID.randomUUID().toString()
   filename = "${uuid}.tsv"
