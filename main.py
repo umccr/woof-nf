@@ -2,6 +2,7 @@
 import argparse
 import glob
 import pathlib
+import textwrap
 import subprocess
 import sys
 
@@ -76,6 +77,11 @@ def main():
     log.task_msg_title('Launching comparison workflow')
     log.task_msg_body('See below for live update\n')
     run_pipeline(inputs_fp, args.output_dir)
+
+    # Render report
+    log.task_msg_title('Rendering RMarkdown report')
+    log.render_newline()
+    render_report(args.output_dir)
     log.task_msg_title('Pipeline completed sucessfully! Goodbye')
 
 
@@ -332,6 +338,26 @@ def run_pipeline(inputs_fp, output_dir):
             lines.append(f'    {line}')
     # Block until pipeline process exits
     p.wait()
+
+
+def render_report(output_dir):
+    output_fp = output_dir / 'report.html'
+    rscript = textwrap.dedent(f'''
+        library(rmarkdown)
+        rmarkdown::render(
+          'lib/report.Rmd',
+          output_file='{output_fp.absolute()}',
+          params=list(
+            results_directory='{output_dir.absolute()}'
+          )
+        )
+    ''')
+    subprocess.run(
+        f'R --vanilla <<EOF\n{rscript}\nEOF',
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True
+    )
 
 
 if __name__ == '__main__':
