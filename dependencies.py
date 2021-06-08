@@ -33,10 +33,6 @@ software_dependencies = {
 def check():
     # Get tool status and render table
     log.task_msg_title('Checking dependencies')
-    log.task_msg_body(
-        'Pre-flight software check. This can be skipped with --no_dependency_check'
-        ' (once I add it)'
-    )
     log.render('\nTool status:')
     tool_status_results = list()
     for tool in software_dependencies:

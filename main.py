@@ -39,7 +39,7 @@ def get_arguments():
 
 def check_arguments(args):
     log.task_msg_title('Checking arguments')
-    log.task_msg_body('Not yet implemented - hold on to your seat!\n')
+    log.task_msg_body('Not yet implemented - hold on to your seats!\n')
     log.render('Free pass for now :)\n')
 
 
@@ -49,7 +49,7 @@ def main():
     # Print entry
     # TODO: further description on what will be done
     msg_body_text = (
-        'Welcome to the UMCCR comparison pipeline\n\n  Stay tuned, more info to come...\n'
+        'Welcome to the UMCCR comparison pipeline\n'
     )
     log.task_msg_title('Starting comparison pipeline')
     log.task_msg_body(msg_body_text)
@@ -59,7 +59,7 @@ def main():
     import multiprocessing
     log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
     log.render('Info:')
-    log.render('  version: 0.0.1')
+    log.render('  version: 0.0.1-alpha')
     log.render(f'  threads: {multiprocessing.cpu_count()}\n')
 
     # Get and check command line arguments
@@ -74,8 +74,7 @@ def main():
     inputs_fp = write_inputs(input_list, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
-    log.task_msg_title('Launching comparison workflow')
-    log.task_msg_body('See below for live update\n')
+    log.task_msg_title('Launching workflow')
     run_pipeline(inputs_fp, args.output_dir)
 
     # Render report
@@ -88,14 +87,7 @@ def main():
 def get_inputs(dir_one, dir_two):
     # Log directories to be searched
     log.task_msg_title('Discovering input files')
-    log.task_msg_body(
-        'TODO: note basic approach and symbols\n'
-        '  e.g. symbols:\n'
-        '    green ticks found/matched\n'
-        '    grey ticks found but not matched/usable\n'
-        '    red cross not found/matched\n'
-    )
-    log.render('Directories searched:')
+    log.render('\nDirectories searched:')
     log_input_directories(dir_one, '1')
     log_input_directories(dir_two, '2')
     log.render_newline()
@@ -309,7 +301,7 @@ def run_pipeline(inputs_fp, output_dir):
         universal_newlines=True,
     )
     # Stream output to terminal, replicating behaviour
-    log.render('Nextflow output:')
+    log.render('\nNextflow output:')
     # Print initial block (block delimiter as an empty newline)
     displayed_lines = 0
     for line in p.stdout:
