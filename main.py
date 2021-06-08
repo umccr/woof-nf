@@ -74,7 +74,7 @@ def main():
     inputs_fp = write_inputs(input_list, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
-    log.task_msg_title('Launching workflow')
+    log.task_msg_title('Executing workflow')
     run_pipeline(inputs_fp, args.output_dir)
 
     # Render report
