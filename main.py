@@ -157,14 +157,20 @@ def create_matched_table(inputs_one, inputs_two, samples_matched):
 
 def render_matched_table(rows):
     # Set header
-    file_columns = list(file_types.keys())
-    header_tokens = ('sample_name', 'set', 'matched', *file_columns)
+    file_name_mapping = {
+        'cpsr': 'CPSR',
+        'pcgr': 'PCGR',
+        'manta': 'Manta',
+        'purple': 'PURPLE',
+    }
+    file_columns = [file_name_mapping[n] for n in file_types.keys()]
+    header_tokens = ('Sample name', 'Set', 'Matched', *file_columns)
     # Min file column width; then set to header token
     # Get column sizes
     largest_sample = max(len(r[0]) for rs in rows for r in rs)
     csize_first = largest_sample + (4 - largest_sample % 4)
     csizes = [csize_first]
-    for file_type in ['set', 'matched', *file_columns]:
+    for file_type in ['Set', 'Matched', *file_columns]:
         # Subtracting one for left-dominant centering on even lengths
         if len(file_type) < 8:
             csizes.append(8 - 1)
