@@ -2,8 +2,7 @@
 // Silently enable DSL2
 nextflow.enable.dsl = 2
 
-// Import modules, workflows
-include { module_compile_report } from './modules/compile_report.nf'
+// Import workflows
 include { workflow_copy_number_variants } from './subworkflows/copy_number_variants.nf'
 include { workflow_small_variants } from './subworkflows/small_variants.nf'
 include { workflow_structural_variants } from './subworkflows/structural_variants.nf'
@@ -33,7 +32,4 @@ workflow {
   workflow_copy_number_variants(ch_cnv)
   workflow_small_variants(ch_smlv)
   workflow_structural_variants(ch_sv)
-
-  // Compile report
-  //module_compile_report()
 }
