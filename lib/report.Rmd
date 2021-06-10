@@ -13,7 +13,7 @@ rmdformats::material:
   highlight: kate
 params:
   title: 'File Comparison Report'
-  results_directory: null
+  results_directory: '~/projects/pipeline_comparison/output/'
 ---
 
 ```{r knitr_options, include=FALSE}
@@ -35,8 +35,12 @@ library(glue)
 ```
 
 ```{r sample_input_directories}
+v.files_exclude <- c(
+  'report.html',
+  'input_files.tsv'
+)
 v.results_directory_children <- Sys.glob(paste0(params$results_directory, '/*'))
-v.sample_dirs <- v.results_directory_children[! grepl('input_files.tsv', v.results_directory_children)]
+v.sample_dirs <- v.results_directory_children[! basename(v.results_directory_children) %in% v.files_exclude]
 ```
 
 # __Overview__
@@ -61,11 +65,11 @@ v.smlv_summary_table_columns <- c(
   'INDEL precision'='IND_Precision',
   'SNP truth'='SNP_Truth',
   'SNP TP'='SNP_TP',
-  'SNP FP'='SNP_FP', 
+  'SNP FP'='SNP_FP',
   'SNP FN'='SNP_FN',
   'INDEL truth'='IND_Truth',
-  'INDEL TP'='IND_TP', 
-  'INDEL FP'='IND_FP', 
+  'INDEL TP'='IND_TP',
+  'INDEL FP'='IND_FP',
   'IND FN'='IND_FN'
 )
 # Rounded columns
@@ -81,11 +85,11 @@ v.smlv_summary_table_columns_comma <- c(
   'Run 2 count',
   'SNP truth',
   'SNP TP',
-  'SNP FP', 
+  'SNP FP',
   'SNP FN',
   'INDEL truth',
-  'INDEL TP', 
-  'INDEL FP', 
+  'INDEL TP',
+  'INDEL FP',
   'IND FN'
 )
 
@@ -99,7 +103,7 @@ get_smlv_summary_data <- function(s.base_dir) {
   # Select and read in all comparison files
   v.comp_fps <- Sys.glob(paste0(s.base_dir, '/small_variants/3_comparison/*tsv'))
   v.comp <- lapply(v.comp_fps, readr::read_tsv, col_types=readr::cols())
-  
+
   # Process counts data
   # 1. remove intersect VCFS - identified by run == 'n/a'
   # 2. recode values: source: input -> all; run: first -> run1_count, second -> run2_count
@@ -111,7 +115,7 @@ get_smlv_summary_data <- function(s.base_dir) {
       run=dplyr::recode(run, first='run1_count', second='run2_count'),
     ) %>%
     tidyr::pivot_wider(names_from=run, id_cols=c(vcf_type, source), values_from=count)
-  
+
   # Create small variants table
   # 1. bind individual comparison tables into one
   # 2. full join on comparison ~ counts; i.e. add counts to comparison table
@@ -119,7 +123,7 @@ get_smlv_summary_data <- function(s.base_dir) {
   # 4. round precision/recall and add commas to other columns
   d.smlv_table <- dplyr::bind_rows(v.comp) %>%
     dplyr::full_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
-    dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>% 
+    dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_round), function(v.col) { format(round(v.col, 4), nsmall=4) })) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_comma), scales::comma))
   return(d.smlv_table)
@@ -134,11 +138,11 @@ d.smlv_summary_data <- purrr::map(v.sample_dirs, get_smlv_summary_data) %>%
 ```
 
 ```{r smlv_summary_table}
-d.smlv_summary_data %>% 
+d.smlv_summary_data %>%
   DT::datatable(
-    rownames=FALSE, 
+    rownames=FALSE,
     filter=list(position='top', clear=FALSE, plain=TRUE),
-    extensions='Scroller', 
+    extensions='Scroller',
     options=list(scroller=TRUE, scrollX=TRUE, scrollY=600)
   ) %>%
   DT::formatStyle(
@@ -242,8 +246,8 @@ tabulate_pcgr_tiers <- function(s.var) {
   # 3. convert from grouped tbl back to ungrouped
   # 3. cast into wide format
   d.table_counts <- d.smlv_pcgr_data %>%
-    dplyr::group_by(!!dplyr::sym(s.var), `PCGR tier`) %>% 
-    dplyr::count(.drop=FALSE) %>% 
+    dplyr::group_by(!!dplyr::sym(s.var), `PCGR tier`) %>%
+    dplyr::count(.drop=FALSE) %>%
     dplyr::ungroup() %>%
     tidyr::pivot_wider(names_from=`PCGR tier`, id_cols=!!dplyr::sym(s.var), values_from=n, values_fill=0)
   # Complete processing of tabulated data
@@ -260,7 +264,7 @@ tabulate_pcgr_tiers <- function(s.var) {
         dplyr::across(where(is.numeric), sum),
         dplyr::across(where(is.character), ~'Total'))
     ) %>%
-    dplyr::rowwise(.) %>% 
+    dplyr::rowwise(.) %>%
     dplyr::mutate(Total=sum(dplyr::c_across(where(is.numeric)))) %>%
     dplyr::ungroup()
 }
@@ -306,7 +310,7 @@ v.sv_summary_table_columns <- c(
   'Precision'='Precision',
   'Truth'='Truth',
   'TP'='TP',
-  'FP'='FP', 
+  'FP'='FP',
   'FN'='FN'
 )
 v.sv_summary_table_columns_big_mark <- c(
@@ -336,7 +340,7 @@ v.sv_fpfn_table_columns_big_mark <- c(
 
 ## __Summary__
 ```{r}
-d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) { 
+d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   readr::read_tsv(
     paste0(s.base_dir, '/structural_variants/eval_metrics.tsv'),
     col_types=readr::cols()
@@ -359,8 +363,8 @@ sv_tpar <- list(
 d.sv_summary_data %>%
   dplyr::mutate_if(is.character, as.factor) %>%
   DT::datatable(
-    rownames=FALSE, 
-    #caption=sv_cap, 
+    rownames=FALSE,
+    #caption=sv_cap,
     class='cell-border display compact',
     filter=list(position='top', clear=FALSE, plain=FALSE),
     extensions=c('Scroller', 'KeyTable'),
@@ -375,7 +379,7 @@ d.sv_summary_data %>%
 ## __Call error counts__
 ```{r}
 # FP/FN table
-d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) { 
+d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   d <- readr::read_tsv(
     paste0(s.base_dir, '/structural_variants/fpfn.tsv'),
     col_types='ccccicic'
@@ -402,19 +406,19 @@ sv_fpfn_tpar <- list(
 d.sv_fpfn_data %>%
   dplyr::mutate_if(is.character, as.factor) %>%
   DT::datatable(
-    rownames=FALSE, 
+    rownames=FALSE,
     class='cell-border display compact',
     filter=list(position='top', clear=FALSE, plain=FALSE),
     extensions=c('Scroller', 'KeyTable'),
     options=list(
-      scroller=TRUE, 
+      scroller=TRUE,
       scrollX=TRUE,
       scrollY=sv_fpfn_tpar$scroll_y)
   ) %>%
   DT::formatStyle(
-    'Call error', 
+    'Call error',
     backgroundColor=DT::styleEqual(
-      c('fp', 'fn'), 
+      c('fp', 'fn'),
       c('#99ff99', '#FFCCCB')
     )
   ) %>%
@@ -436,31 +440,59 @@ d.sv_circos_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
     png_filepath=Sys.glob(paste0(s.base_dir, '/structural_variants/circos/circos_*.png'))
   )
 }) %>%
-  dplyr::bind_rows() %>% 
+  dplyr::bind_rows() %>%
   dplyr::left_join(d.sv_summary_data, by=c('Sample name'))
 
 for (i in 1:nrow(d.sv_circos_data)) {
   cat('\n### ', paste(d.sv_circos_data$`Sample name`[i], '\n'))
   cat(glue::glue('<img src="{d.sv_circos_data$png_filepath[i]}" alt="{d.sv_circos_data$`Sample name`[i]}" width="30%">'), '\n')
   cat('\n***\n')
-  
+
 }
 ```
 
 # __Copy number variants__
 ## __Summary__
 ```{r}
-umccr_genes <-
-  system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr') %>%
-  readr::read_lines()
+s.umcccr_genes_fp <- system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr')
+v.umccr_genes <- readr::read_lines(s.umcccr_genes_fp)
 
+v.cnv_table_columns <- c(
+  'Sample name'='sample_name',
+  'Gene'='gene',
+  'UMCCR gene'='in_umccr',
+  'Min different'='min_diff',
+  'Max different'='max_diff',
+  'Min (first/second)'='mincn_1_2',
+  'Max (first/second)'='maxcn_1_2',
+  'Min diff'='mincn_diff',
+  'Max diff'='maxcn_diff',
+  'Chromosome'='chrom',
+  'Start'='start',
+  'End'='end'
+)
+v.cnv_table_columns_comma <- c(
+  'Start',
+  'End'
+)
+v.cnv_table_columns_colour <- c(
+  'UMCCR gene',
+  'Min different',
+  'Max different'
+)
 
-# Copy number variants
+# Prepare copy number variant data
+# 1. read individual CN data files, and add sample name column
+# 2. bind rows together, then create new columns:
+#      - combine min/max for run 1 and run 2,
+#      - difference of min/max b/n runs, and
+#      - is a UMCCR gene
+# 3. order and rename colums
+# 4. add format appropriate numeric columns with commas
 d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
   s.sample_name <- basename(s.base_dir)
   readr::read_tsv(paste0(s.base_dir, '/copy_number_variants/cn_diff.tsv'), col_types='ciicddddcc') %>%
-    dplyr::mutate(sample_name=s.sample_name) %>%
-    dplyr::select(sample_name, everything())
+    dplyr::mutate(sample_name=s.sample_name)
 }) %>%
   dplyr::bind_rows() %>%
   dplyr::mutate(
@@ -468,44 +500,29 @@ d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
     maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
     mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 1),
     maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 1),
-    in_umccr=ifelse(gene %in% umccr_genes, 'TRUE', 'FALSE')
+    in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
   ) %>%
-  dplyr::select(
-    sample_name,
-    gene,
-    in_umccr,
-    min_isdiff=min_diff,
-    max_isdiff=max_diff,
-    mincn_1_2,
-    maxcn_1_2,
-    mincn_diff,
-    maxcn_diff,
-    chrom,
-    start,
-    end
-  )
+  dplyr::select(dplyr::all_of(v.cnv_table_columns)) %>%
+  dplyr::mutate(across(dplyr::all_of(v.cnv_table_columns_comma), scales::comma))
 ```
 
 ```{r}
-cnv_cn_tpar <- list(
-  # scrollY should be 35px per row, with max of 580px.
-  scroll_y=10 + min(nrow(d.cnv_data_diff) * 35, 570),
-  big_mark_cols=c('start', 'end'))
-
 d.cnv_data_diff %>%
   dplyr::mutate_if(is.character, as.factor) %>%
   DT::datatable(
-    rownames=FALSE, class='cell-border display compact',
+    rownames=FALSE,
+    class='cell-border display compact',
     caption=paste0('Differences in Copy Number (threshold: 0.1)'),
     filter=list(position='top', clear=FALSE, plain=FALSE),
     extensions=c('Scroller', 'KeyTable'),
     options=list(
-      scroller=TRUE, 
+      scroller=TRUE,
       scrollX=TRUE,
-      scrollY=cnv_cn_tpar$scroll_y)
+      scrollY=10 + min(nrow(d.cnv_data_diff) * 35, 570)
+    )
   ) %>%
   DT::formatStyle(
-    c('min_isdiff', 'max_isdiff', 'in_umccr'), backgroundColor=DT::styleEqual(c('TRUE'), c('#FFCCCB'))) %>%
-  DT::formatCurrency(
-    cnv_cn_tpar$big_mark_cols, currency='', interval=3, mark=',', digits=0)
+    v.cnv_table_columns_colour,
+    backgroundColor=DT::styleEqual(c('TRUE'), c('#FFCCCB'))
+  )
 ```
