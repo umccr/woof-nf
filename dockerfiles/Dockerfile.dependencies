@@ -1,0 +1,43 @@
+# Build on top of Ubuntu LTS (focal)
+FROM ubuntu:20.04
+
+# Set conda environment name
+ENV ENV_NAME=cmpwf
+
+# Install several packages through system package manager
+RUN \
+  apt-get update && \
+  apt-get install -y \
+      curl \
+      python3 \
+      unzip
+
+# Install AWS command line tools
+RUN \
+  curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip' && \
+  unzip awscliv2.zip && \
+  ./aws/install --bin-dir /usr/bin && \
+  rm -r awscliv2.zip aws/
+
+# Install Miniconda
+RUN \
+  curl 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh' -o 'miniconda.sh' && \
+  /bin/bash miniconda.sh -b -p /opt/miniconda/ && \
+  rm miniconda.sh
+
+# Prepare conda environment
+COPY condafiles/conda_env.yaml .
+RUN \
+  # Source miniconda software
+  . /opt/miniconda/etc/profile.d/conda.sh && \
+  # Create and activate new environment, install mamba
+  conda create -n "${ENV_NAME}" && \
+  conda activate "${ENV_NAME}" && \
+  conda install -c conda-forge mamba && \
+  # Install dependencies, clean up
+  mamba install -c bioconda -c conda-forge --file conda_env.yaml && \
+  rm conda_env.yaml
+
+# Add conda env to path
+ENV PATH="/opt/miniconda/envs/${ENV_NAME}/bin:/opt/miniconda/bin:${PATH}"
+ENV CONDA_PREFIX="/opt/miniconda/envs/${ENV_NAME}"
