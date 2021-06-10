@@ -5,10 +5,12 @@ FROM ubuntu:20.04
 ENV ENV_NAME=cmpwf
 
 # Install several packages through system package manager
+# NOTE: bsdmainutils provides hexdump, which is used check magic bits of files
 RUN \
   apt-get update && \
   apt-get install -y \
       curl \
+      bsdmainutils \
       python3 \
       unzip
 
