@@ -2,17 +2,31 @@
 FROM ubuntu:20.04
 
 # Set conda environment name
-ENV ENV_NAME=cmpwf
+ARG ENV_NAME=cmpwf
+
+# Enable non-interactive tzdata install and config
+ARG DEBIAN_FRONTEND='noninteractive'
+ARG TZ='Etc/UTC'
 
 # Install several packages through system package manager
-# NOTE: bsdmainutils provides hexdump, which is used check magic bits of files
+# NOTE:
+#   ca-certificates: required for https/curl
+#   bsdmainutils: provides hexdump (used in nf process module_smlv_count)
+#   libgd-perl: required by circos; conda seemlying doesn't install this dep itself
+#   tzdata: required for readr
 RUN \
   apt-get update && \
-  apt-get install -y \
-      curl \
-      bsdmainutils \
-      python3 \
-      unzip
+  apt-get install -y --no-install-recommends \
+    ca-certificates  \
+    curl \
+    bsdmainutils \
+    libgd-perl \
+    python3 \
+    tzdata  \
+    unzip && \
+  # Clean up
+  apt-get clean && \
+  rm -rf /var/lib/apt/
 
 # Install AWS command line tools
 RUN \
@@ -29,6 +43,8 @@ RUN \
 
 # Prepare conda environment
 COPY condafiles/conda_env.yaml .
+# Execute RUN with /bin/bash; /bin/sh produces error when deactivating conda env
+SHELL ["/bin/bash", "-c"]
 RUN \
   # Source miniconda software
   . /opt/miniconda/etc/profile.d/conda.sh && \
@@ -37,8 +53,19 @@ RUN \
   conda activate "${ENV_NAME}" && \
   conda install -c conda-forge mamba && \
   # Install dependencies, clean up
-  mamba install -c bioconda -c conda-forge --file conda_env.yaml && \
+  mamba install \
+    -c bioconda \
+    -c conda-forge \
+    -c pdiakumis \
+    --file conda_env.yaml && \
+  # Clean up
+  # Base conda directory, including /opt/miniconda/pkgs/
+  conda clean --all --force-pkgs-dirs -y && \
+  # New conda env, including /opt/miniconda/envs/${ENV_NAME}/pkgs/
+  /opt/miniconda/envs/${ENV_NAME}/bin/conda clean --all --force-pkgs-dirs -y && \
   rm conda_env.yaml
+# Revert RUN execution shell to /bin/sh as good practise
+SHELL ["/bin/sh", "-c"]
 
 # Add conda env to path
 ENV PATH="/opt/miniconda/envs/${ENV_NAME}/bin:/opt/miniconda/bin:${PATH}"

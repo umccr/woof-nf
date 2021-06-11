@@ -1,5 +1,7 @@
 bcftools=1.12
+circos
 r-bedr
 r-dt
 r-glue
+r-rock
 r-tidyverse
