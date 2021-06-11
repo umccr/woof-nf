@@ -8,9 +8,10 @@ def get_woofr_source_fp():
 
 
 def get_lib_path():
-    # Assume script path is in ./bin/ and library code is in ./lib/
-    script_path = pathlib.Path(__file__).resolve()
-    return (script_path.parent / '../lib').resolve()
+    # Currently the nf-amazon plugin only uploads the ./bin/ directory to AWS instances. Any ./lib/
+    # files accessed during task execution are required to be in ./bin/. The ./bin/ directory
+    # appears as /nextflow-bin/ on AWS instances.
+    return pathlib.Path(__file__).parent
 
 
 def execute_command(command):
