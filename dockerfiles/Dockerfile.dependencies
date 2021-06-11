@@ -56,6 +56,7 @@ RUN \
   mamba install \
     -c bioconda \
     -c conda-forge \
+    # Provides r-rock
     -c pdiakumis \
     --file conda_env.yaml && \
   # Clean up
@@ -67,6 +68,6 @@ RUN \
 # Revert RUN execution shell to /bin/sh as good practise
 SHELL ["/bin/sh", "-c"]
 
-# Add conda env to path
+# Add conda env to PATH
 ENV PATH="/opt/miniconda/envs/${ENV_NAME}/bin:/opt/miniconda/bin:${PATH}"
 ENV CONDA_PREFIX="/opt/miniconda/envs/${ENV_NAME}"
