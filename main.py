@@ -74,13 +74,12 @@ def main():
     inputs_fp = write_inputs(input_list, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
-    log.task_msg_title('Executing workflow')
     run_pipeline(inputs_fp, args.output_dir)
 
     # Render report
-    log.task_msg_title('Rendering RMarkdown report')
-    log.render_newline()
     render_report(args.output_dir)
+
+    # Exit message
     log.task_msg_title('Pipeline completed sucessfully! Goodbye')
 
 
@@ -298,6 +297,7 @@ def write_inputs(input_list, output_fp):
 
 def run_pipeline(inputs_fp, output_dir):
     # Start
+    log.task_msg_title('Executing workflow')
     p = subprocess.Popen(
         f'./pipeline.nf --inputs_fp {inputs_fp} --output_dir {output_dir}',
         stdout=subprocess.PIPE,
@@ -339,6 +339,8 @@ def run_pipeline(inputs_fp, output_dir):
 
 
 def render_report(output_dir):
+    log.task_msg_title('Rendering RMarkdown report')
+    log.render_newline()
     output_fp = output_dir / 'report.html'
     rscript = textwrap.dedent(f'''
         library(rmarkdown)
