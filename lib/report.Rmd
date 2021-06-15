@@ -32,12 +32,7 @@ library(tidyverse)
 ```
 
 ```{r sample_input_directories}
-v.files_exclude <- c(
-  'report.html',
-  'input_files.tsv'
-)
-v.results_directory_children <- Sys.glob(paste0(params$results_directory, '/*'))
-v.sample_dirs <- v.results_directory_children[! basename(v.results_directory_children) %in% v.files_exclude]
+v.sample_dirs <- fs::dir_ls(params$results_directory, glob='/*', type='directory')
 ```
 
 # __Overview__
