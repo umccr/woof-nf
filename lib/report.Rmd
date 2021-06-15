@@ -26,12 +26,9 @@ knitr::opts_chunk$set(
 ```
 
 ```{r libraries}
-library(tidyverse)
-library(DT)
-library(scales)
 library(bedr)
-library(tibble)
-library(glue)
+library(DT)
+library(tidyverse)
 ```
 
 ```{r sample_input_directories}
