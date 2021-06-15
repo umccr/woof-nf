@@ -498,8 +498,8 @@ d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
   dplyr::mutate(
     mincn_1_2=paste0(min_cn.run1, '/', min_cn.run2),
     maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
-    mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 1),
-    maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 1),
+    mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
+    maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
     in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
   ) %>%
   dplyr::select(dplyr::all_of(v.cnv_table_columns)) %>%
