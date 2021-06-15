@@ -225,6 +225,14 @@ get_smlv_pcgr_data <- function(s.base_dir) {
 # 2. sort rows by subset
 d.smlv_pcgr_data <- purrr::map(v.sample_dirs, get_smlv_pcgr_data) %>%
   dplyr::bind_rows()
+
+# Subset top n, ordering by supposed priority
+#   1. group by sample and then order by PCGR tier
+#   2. select top n entries
+d.smlv_pcgr_data_subset <- d.smlv_pcgr_data %>%
+  dplyr::group_by(`Sample name`) %>%
+  dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`)) %>%
+  dplyr::slice(1:10)
 ```
 
 ```{r smlv_pcgr_tablulate_function}
@@ -280,8 +288,8 @@ tabulate_pcgr_tiers('SAGE hotspot') %>%
 
 ### __PCGR__ variants
 ```{r smlv_pcgr_table_all_variants}
-# All PCGR variants
-d.smlv_pcgr_data %>%
+# Subset of individual PCGR variants
+d.smlv_pcgr_data_subset %>%
   DT::datatable(
     rownames=FALSE,
     caption='PCGR FP and FN variants for all samples.',
