@@ -300,7 +300,7 @@ d.smlv_pcgr_data_subset %>%
 ```
 
 # __Structural variants__
-```{r}
+```{r sv_constants}
 v.sv_summary_table_columns <- c(
   'Sample name'='sample',
   'VCF type'='flabel',
@@ -339,7 +339,7 @@ v.sv_fpfn_table_columns_big_mark <- c(
 ```
 
 ## __Summary__
-```{r}
+```{r sv_summary_data}
 d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   readr::read_tsv(
     paste0(s.base_dir, '/structural_variants/eval_metrics.tsv'),
@@ -350,7 +350,7 @@ d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   dplyr::select(all_of(v.sv_summary_table_columns))
 ```
 
-```{r}
+```{r sv_summary_table}
 sv_tpar <- list(
   # scrollY should be 35px per row, with max of 580px.
   scroll_y=10 + min(nrow(d.sv_summary_data) * 35, 570),
@@ -376,9 +376,9 @@ d.sv_summary_data %>%
   ) %>%
   DT::formatCurrency(sv_tpar$big_mark_cols, currency='', interval=3, mark=',', digits=0)
 ```
+
 ## __Call error counts__
-```{r}
-# FP/FN table
+```{r sv_fpfn_data}
 d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   d <- readr::read_tsv(
     paste0(s.base_dir, '/structural_variants/fpfn.tsv'),
@@ -394,7 +394,7 @@ d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   dplyr::select(all_of(v.sv_fpfn_table_columns))
 ```
 
-```{r}
+```{r sv_fpfn_table}
 sv_fpfn_tpar <- list(
   # scrollY should be 35px per row, with max of 580px.
   scroll_y=10 + min(nrow(d.sv_fpfn_data) * 35, 570),
@@ -432,7 +432,7 @@ d.sv_fpfn_data %>%
 ```
 
 ## __SV circos__ {.tabset .tabset-pills}
-```{r results='asis'}
+```{r results='asis', sv_circos}
 d.sv_circos_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   sample_name <- basename(s.base_dir)
   tibble::tibble(
@@ -453,7 +453,7 @@ for (i in 1:nrow(d.sv_circos_data)) {
 
 # __Copy number variants__
 ## __Summary__
-```{r}
+```{r cnv_summary_data}
 s.umcccr_genes_fp <- system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr')
 v.umccr_genes <- readr::read_lines(s.umcccr_genes_fp)
 
@@ -506,8 +506,8 @@ d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
   dplyr::mutate(across(dplyr::all_of(v.cnv_table_columns_comma), scales::comma))
 ```
 
-```{r}
-d.cnv_data_diff %>%
+```{r cnv_summary_table}
+d.cnv_data_diff_subset %>%
   dplyr::mutate_if(is.character, as.factor) %>%
   DT::datatable(
     rownames=FALSE,
