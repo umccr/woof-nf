@@ -352,12 +352,16 @@ def render_report(output_dir):
           )
         )
     ''')
-    subprocess.run(
+    p = subprocess.run(
         f'R --vanilla <<EOF\n{rscript}\nEOF',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        shell=True
+        shell=True,
+        encoding='utf-8'
     )
+    if p.returncode != 0:
+        log.render(f'error:\n{p.stderr}')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
