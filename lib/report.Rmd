@@ -536,3 +536,41 @@ d.cnv_data_diff_subset %>%
     backgroundColor=DT::styleEqual(c('TRUE'), c('#FFCCCB'))
   )
 ```
+
+
+# Build information
+## Report configuration
+```{r configuration}
+dplyr::tibble(
+  Sample=v.sample_dirs,
+) %>%
+  knitr::kable(format='html') %>%
+  kableExtra::kable_styling(full_width=FALSE, position='left') %>%
+  kableExtra::scroll_box(height='200px')
+```
+
+## R packages
+```{r packages}
+v.packages <- c(
+  purrr::map(sessionInfo()$basePkgs, packageDescription),
+  sessionInfo()$otherPkgs,
+  sessionInfo()$loadedOnly
+)
+d.packages <- purrr::map(v.packages, function(v.package) {
+  s.build_date <- str_extract(v.package$Built, '(20|19)[0-9]{2}-[0-9]{2}-[0-9]{2}')
+  tibble::tibble(
+    Package=v.package$Package,
+    Version=v.package$Version,
+    `System path`=find.package(v.package$Package),
+    `Build date`=s.build_date
+  )
+}) %>%
+  dplyr::bind_rows() %>%
+  dplyr::arrange(`Package`)
+
+d.packages %>%
+  knitr::kable(format='html') %>%
+  kableExtra::kable_styling(full_width=TRUE, position='left') %>%
+  kableExtra::column_spec(1, bold=TRUE) %>%
+  kableExtra::scroll_box(height='400px')
+```
