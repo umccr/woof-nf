@@ -42,7 +42,7 @@ RUN \
   rm miniconda.sh
 
 # Prepare conda environment
-COPY condafiles/conda_env.yaml .
+COPY infrastructure/conda_env.yaml .
 # Execute RUN with /bin/bash; /bin/sh produces error when deactivating conda env
 SHELL ["/bin/bash", "-c"]
 RUN \
