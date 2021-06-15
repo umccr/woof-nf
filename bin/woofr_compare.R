@@ -570,8 +570,8 @@ read_purple_gene_file <- function(x) {
     dplyr::mutate(
       start = as.integer(.data$start),
       end = as.integer(.data$end),
-      min_cn = round(as.numeric(.data$mincopynumber), 1),
-      max_cn = round(as.numeric(.data$maxcopynumber), 1)) %>%
+      min_cn = round(as.numeric(.data$mincopynumber), 2),
+      max_cn = round(as.numeric(.data$maxcopynumber), 2)) %>%
     dplyr::select(
       chrom = .data$chromosome, .data$start, .data$end,.data$gene, .data$min_cn, .data$max_cn)
 }
