@@ -1,0 +1,137 @@
+# Structural variants
+```{r sv_constants}
+v.sv_summary_table_columns <- c(
+  'Sample name'='sample',
+  'VCF type'='flabel',
+  'Run 1 count'='run1_count',
+  'Run 2 count'='run2_count',
+  'Recall'='Recall',
+  'Precision'='Precision',
+  'Truth'='Truth',
+  'TP'='TP',
+  'FP'='FP',
+  'FN'='FN'
+)
+v.sv_summary_table_columns_comma <- c(
+  'Run 1 count',
+  'Run 2 count',
+  'Truth',
+  'TP',
+  'FP',
+  'FN'
+)
+
+v.sv_fpfn_table_columns <- c(
+  'Call error'='FP_or_FN',
+  'Sample name'='sample',
+  'VCF type'='flabel',
+  'Chromosome 1'='chrom1',
+  'Position 1'='pos1',
+  'Chromosome 2'='chrom2',
+  'Position 2'='pos2',
+  'SV type'='svtype'
+)
+v.sv_fpfn_table_columns_comma <- c(
+  'Position 1',
+  'Position 2'
+)
+```
+
+## Summary
+```{r sv_summary_data}
+d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
+  s.sv_metrics_fp <- paste0(s.base_dir, '/structural_variants/eval_metrics.tsv')
+  if (! fs::file_exists(s.sv_metrics_fp)) {
+    return(NULL)
+  }
+  readr::read_tsv(s.sv_metrics_fp, col_types=readr::cols())
+}) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select(all_of(v.sv_summary_table_columns)) %>%
+  dplyr::mutate(across(dplyr::all_of(v.sv_summary_table_columns_comma), scales::comma))
+
+```
+
+```{r sv_summary_table}
+n.table_height <- min(31 * nrow(d.sv_summary_data), 600)
+d.sv_summary_data %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames=FALSE,
+    class='cell-border display compact',
+    filter=list(position='top', clear=FALSE, plain=FALSE),
+    extensions=c('Scroller', 'KeyTable'),
+    options=list(scroller=TRUE, scrollX=TRUE, scrollY=n.table_height)) %>%
+  DT::formatStyle(
+    c('Recall', 'Precision'),
+    background=DT::styleColorBar(c(0.97, 1), color='#99ff99'),
+    backgroundSize='90% 90%', backgroundRepeat='no-repeat', backgroundPosition='center'
+  )
+```
+
+## Call error counts
+```{r sv_fpfn_data}
+d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
+  s.sv_fpfn_fp <- paste0(s.base_dir, '/structural_variants/fpfn.tsv')
+  if (! fs::file_exists(s.sv_fpfn_fp)) {
+    return(NULL)
+  }
+  d <- readr::read_tsv(s.sv_fpfn_fp, col_types='ccccicic')
+  if (nrow(d)==0) {
+    return(NULL)
+  } else {
+    return(d)
+  }
+}) %>%
+  dplyr::bind_rows() %>%
+  dplyr::select(dplyr::all_of(v.sv_fpfn_table_columns)) %>%
+  dplyr::mutate(across(dplyr::all_of(v.sv_fpfn_table_columns_comma), scales::comma))
+```
+
+```{r sv_fpfn_table}
+n.table_height <- min(31 * nrow(d.sv_fpfn_data), 600)
+d.sv_fpfn_data %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames=FALSE,
+    class='cell-border display compact',
+    filter=list(position='top', clear=FALSE, plain=FALSE),
+    extensions=c('Scroller', 'KeyTable'),
+    options=list(
+      scroller=TRUE,
+      scrollX=TRUE,
+      scrollY=n.table_height
+    )
+  ) %>%
+  DT::formatStyle(
+    'Call error',
+    backgroundColor=DT::styleEqual(
+      c('fp', 'fn'),
+      c('#99ff99', '#FFCCCB')
+    )
+  )
+```
+
+## SV circos {.tabset .tabset-pills}
+```{r results='asis', sv_circos}
+d.sv_circos_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
+  sample_name <- basename(s.base_dir)
+  s.circos_fp <- suppressWarnings(fs::dir_ls(paste0(s.base_dir, '/structural_variants/circos/'), glob='*/circos_*png', fail=FALSE)) 
+  if (length(s.circos_fp)==0) {
+    return(NULL)
+  }
+  tibble::tibble(
+    'Sample name'=sample_name,
+    png_filepath=Sys.glob(s.circos_fp)
+  )
+}) %>%
+  dplyr::bind_rows() %>%
+  dplyr::left_join(d.sv_summary_data, by=c('Sample name'))
+
+for (i in 1:nrow(d.sv_circos_data)) {
+  cat('\n### ', paste(d.sv_circos_data$`Sample name`[i], '\n'))
+  cat(glue::glue('<img src="{d.sv_circos_data$png_filepath[i]}" alt="{d.sv_circos_data$`Sample name`[i]}" width="30%">'), '\n')
+  cat('\n***\n')
+  
+}
+```

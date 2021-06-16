@@ -1,0 +1,91 @@
+# Copy number variants
+## Summary
+```{r cnv_summary_data}
+s.umcccr_genes_fp <- system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr')
+v.umccr_genes <- readr::read_lines(s.umcccr_genes_fp)
+
+v.cnv_table_columns <- c(
+  'Sample name'='sample_name',
+  'Gene'='gene',
+  'UMCCR gene'='in_umccr',
+  'Min different'='min_diff',
+  'Max different'='max_diff',
+  'Min (first/second)'='mincn_1_2',
+  'Max (first/second)'='maxcn_1_2',
+  'Min diff'='mincn_diff',
+  'Max diff'='maxcn_diff',
+  'Chromosome'='chrom',
+  'Start'='start',
+  'End'='end'
+)
+v.cnv_table_columns_comma <- c(
+  'Start',
+  'End'
+)
+v.cnv_table_columns_colour <- c(
+  'UMCCR gene',
+  'Min different',
+  'Max different'
+)
+
+# Prepare copy number variant data
+# 1. read individual CN data files, and add sample name column
+# 2. bind rows together, then create new columns:
+#      - combine min/max for run 1 and run 2,
+#      - difference of min/max b/n runs, and
+#      - is a UMCCR gene
+# 3. order and rename colums
+# 4. add format appropriate numeric columns with commas
+d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
+  s.sample_name <- basename(s.base_dir)
+  s.cnv_fp <- paste0(s.base_dir, '/copy_number_variants/cn_diff.tsv')
+  if (! fs::file_exists(s.cnv_fp)) {
+    return(NULL)
+  }
+  readr::read_tsv(s.cnv_fp, col_types='ciicddddcc') %>%
+    dplyr::mutate(sample_name=s.sample_name)
+}) %>%
+  dplyr::bind_rows() %>%
+  dplyr::mutate(
+    mincn_1_2=paste0(min_cn.run1, '/', min_cn.run2),
+    maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
+    mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
+    maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
+    in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
+  ) %>%
+  dplyr::select(dplyr::all_of(v.cnv_table_columns)) %>%
+  dplyr::mutate(across(dplyr::all_of(v.cnv_table_columns_comma), scales::comma))
+
+# Subset data for display
+#  1. group by sample name
+#  2. order by size of min/max difference
+#  3. select to entries
+d.cnv_data_diff_subset <- d.cnv_data_diff %>%
+  dplyr::group_by(`Sample name`) %>%
+  dplyr::arrange(-(`Max diff` + `Max diff`)) %>%
+  dplyr::slice(1:10) %>%
+  dplyr::ungroup()
+
+```
+
+```{r cnv_summary_table}
+n.table_height <- min(31 * nrow(d.cnv_data_diff_subset), 600)
+d.cnv_data_diff_subset %>%
+  dplyr::mutate_if(is.character, as.factor) %>%
+  DT::datatable(
+    rownames=FALSE,
+    class='cell-border display compact',
+    caption=paste0('Differences in Copy Number (threshold: 0.1)'),
+    filter=list(position='top', clear=FALSE, plain=FALSE),
+    extensions=c('Scroller', 'KeyTable'),
+    options=list(
+      scroller=TRUE,
+      scrollX=TRUE,
+      scrollY=n.table_height
+    )
+  ) %>%
+  DT::formatStyle(
+    v.cnv_table_columns_colour,
+    backgroundColor=DT::styleEqual(c('TRUE'), c('#FFCCCB'))
+  )
+```
