@@ -1,6 +1,7 @@
 import argparse
 import multiprocessing
 import pathlib
+import sys
 
 
 from . import log
@@ -28,14 +29,6 @@ def collect():
         type=pathlib.Path,
         help='Output directory'
     )
-
-    parser.add_argument(
-        '--threads',
-        type=int,
-        default=multiprocessing.cpu_count(),
-        help='Number of threads to utilise'
-    )
-
     parser.add_argument(
         '--executor',
         choices=('local', 'aws'),
@@ -51,17 +44,31 @@ def collect():
         action='store_true',
         help='Force use of docker with local executor'
     )
-
     parser.add_argument(
         '--resume',
         action='store_true',
         help='Resume previous workflow'
     )
-
     return parser.parse_args()
 
 
-def check(args):
+def check_and_process(args):
     log.task_msg_title('Checking arguments')
-    log.task_msg_body('Not yet implemented - hold on to your seats!\n')
-    log.render('Free pass for now :)\n')
+    log.task_msg_body('Not yet fully implemented - hold on to your seats!\n')
+
+    if args.executor == 'aws' and not args.s3_bucket:
+        msg = '--s3_bucket <bucket_uri> is required when using the aws executor'
+        log.render(log.ftext(f'error: {msg}', c='red'))
+        sys.exit(1)
+
+    if args.s3_bucket and not args.executor == 'aws':
+        msg = '--s3_bucket is only applicable when using the aws executor'
+        log.render(log.ftext(f'error: {msg}', c='red'))
+        sys.exit(1)
+
+    if args.executor == 'aws' and not args.docker:
+        log.render('info: aws executor requires docker but wasn\'t explicitly set, forcing')
+        args.docker = True
+    log.render_newline()
+
+    return args

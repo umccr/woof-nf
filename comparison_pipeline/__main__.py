@@ -25,16 +25,15 @@ def entry():
 
     # Get and check command line arguments
     args = arguments.collect()
-    arguments.check(args)
+    args = arguments.check_and_process(args)
 
     log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
     log.render('Info:')
     log.render(f'  version: {__version__}')
     log.render(f'  executor: {args.executor}')
-    log.render(f'  s3_bucket: {args.s3_bucket if args.s3_bucket else "na"}')
-    log.render(f'  resume: {args.resume}')
-    log.render(f'  threads: {args.threads}')
-    log.render(f'  docker: {args.docker}\n')
+    log.render(f'  docker: {"yes" if args.docker else "no"}')
+    log.render(f'  s3_bucket: {args.s3_bucket if args.s3_bucket else "n/a"}')
+    log.render(f'  resume: {"yes" if args.resume else "no"}\n')
 
     # Check dependencies
     dependencies.check(args.executor)
@@ -44,7 +43,14 @@ def entry():
     inputs_fp = inputs.write(input_list, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
-    workflow.run(inputs_fp, args.output_dir)
+    workflow.run(
+        inputs_fp,
+        args.output_dir,
+        args.resume,
+        args.docker,
+        args.executor,
+        args.s3_bucket
+    )
 
     # Render report
     report.render(args.output_dir)

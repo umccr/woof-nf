@@ -14,29 +14,35 @@ software_dependencies = {
         'max': None,
         'arg': '-v',
         'regex': '^circos \| v ([0-9.-]+)',
+        'dockerised': True,
     },
     'bcftools': {
         'min': '1.12',
         'max': None,
         'arg': '-v',
         'regex': '^^bcftools ([0-9.]+)',
+        'dockerised': True,
     },
     'nextflow': {
         'min': '21.04.0',
         'max': None,
         'arg': '-version',
         'regex': '^.+version ([0-9.]+) build',
+        'dockerised': False,
     },
 }
 
 
-def check(args):
+def check(docker):
     # Get tool status and render table
     log.task_msg_title('Checking dependencies')
     log.render('\nTool status:')
     tool_status_results = list()
     for tool in software_dependencies:
-        tool_status = get_tool_status(tool)
+        if docker and software_dependencies[tool]['dockerised']:
+            tool_status = (tool, '-', 'docker')
+        else:
+            tool_status = get_tool_status(tool)
         tool_status_results.append(tool_status)
     csizes = get_column_sizes(tool_status_results)
     missing_errors = render_dependency_table(tool_status_results, csizes)
@@ -110,6 +116,9 @@ def render_dependency_table(tool_status_results, csizes):
         row_just = [text.ljust(csize) for csize, text in zip(csizes, row)]
         if row[-1] == 'good':
             row_just[-1] = log.ftext(row_just[-1], c='green')
+            log.render('  ' + ''.join(row_just))
+        elif row[-1] == 'docker':
+            row_just[-1] = log.ftext(row_just[-1], c='black')
             log.render('  ' + ''.join(row_just))
         elif row[-1] in {'not found', 'too old', 'too new'}:
             # Output text

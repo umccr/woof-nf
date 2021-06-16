@@ -6,17 +6,35 @@ import sys
 from . import log
 
 
-def run(inputs_fp, output_dir):
-    # Start
+docker_uri = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com/comparison_pipeline:0.0.1'
+
+
+def run(inputs_fp, output_dir, resume, docker, executor, bucket):
+    # Set workflow configuration
+    args = list()
+    args.append(f'--inputs_fp {inputs_fp}')
+    args.append(f'--output_dir {output_dir}')
+    if resume:
+        args.append('-resume')
+    if docker:
+        args.append(f'-with-docker {docker_uri}')
+    if executor == 'aws':
+        args.append('-process.executor awsbatch')
+        args.append('-process.queue nextflow-testing-job-queue')
+        args.append(f'-bucket-dir {bucket}')
+    elif executor == 'local':
+        args.append('-process.executor local')
+    else:
+        assert False
+    args_str = ' '.join(args)
+    # Prepare full command
     log.task_msg_title('Executing workflow')
     workflow_fp = pathlib.Path(__file__).parent / 'workflow/pipeline.nf'
+    command = f'{workflow_fp} {args_str}'
+    log.render(log.ftext(f'\nCommand: {command}', f='bold'))
+    # Start
     p = subprocess.Popen(
-        f'''
-        {workflow_fp} \
-          --inputs_fp {inputs_fp} \
-          --output_dir {output_dir} \
-          -bucket-dir s3://umccr-temp-dev/stephen/nextflow_temp/
-        ''',
+        command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
