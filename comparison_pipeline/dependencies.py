@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-import log
+from . import log
 
 
 software_dependencies = {

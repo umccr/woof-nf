@@ -2,7 +2,7 @@
 title: 'Variant comparison report'
 author: 'University of Melbourne Centre for Cancer Research'
 date: '`r Sys.time()`'
-output: 
+output:
   html_document:
     theme: cosmo
 code_download: true

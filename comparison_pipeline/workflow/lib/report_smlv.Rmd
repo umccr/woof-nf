@@ -55,7 +55,7 @@ get_smlv_summary_data <- function(s.base_dir) {
   # Select and read in all comparison files
   v.comp_fps <- Sys.glob(paste0(s.base_dir, '/small_variants/3_comparison/*tsv'))
   v.comp <- lapply(v.comp_fps, readr::read_tsv, col_types=readr::cols())
-  
+
   # Process counts data
   # 1. remove intersect VCFS - identified by run == 'n/a'
   # 2. recode values: source: input -> all; run: first -> run1_count, second -> run2_count
@@ -67,7 +67,7 @@ get_smlv_summary_data <- function(s.base_dir) {
       run=dplyr::recode(run, first='run1_count', second='run2_count'),
     ) %>%
     tidyr::pivot_wider(names_from=run, id_cols=c(vcf_type, source), values_from=count)
-  
+
   # Create small variants table
   # 1. bind individual comparison tables into one
   # 2. full join on comparison ~ counts; i.e. add counts to comparison table

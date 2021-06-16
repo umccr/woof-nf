@@ -7,8 +7,9 @@ import subprocess
 import sys
 
 
-import log
-import dependencies
+from . import log
+from . import dependencies
+from . import __version__
 
 
 umccrise_inputs = {
@@ -43,7 +44,7 @@ def check_arguments(args):
     log.render('Free pass for now :)\n')
 
 
-def main():
+def entry():
     # TODO: splash
 
     # Print entry
@@ -54,12 +55,11 @@ def main():
     log.task_msg_title('Starting comparison pipeline')
     log.task_msg_body(msg_body_text)
 
-    # TODO: more version elsewhere
     # TODO: allow user to set threads
     import multiprocessing
     log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
     log.render('Info:')
-    log.render('  version: 0.0.1-alpha')
+    log.render(f'  version: {__version__}')
     log.render(f'  threads: {multiprocessing.cpu_count()}\n')
 
     # Get and check command line arguments
@@ -93,6 +93,16 @@ def get_inputs(dir_one, dir_two):
     # Discover all inputs
     inputs_one = discover_run_files(dir_one)
     inputs_two = discover_run_files(dir_two)
+
+    #del inputs_one['2016_249_17_MH_P033']['purple']
+    #del inputs_one['2016_249_17_MH_P033']['cpsr']
+    #del inputs_one['SEQC-II-50pc']['cpsr']
+    #del inputs_two['SEQC-II-50pc']['cpsr']
+    #del inputs_one['SEQC-II-50pc']['pcgr']
+    #del inputs_two['B_ALL_Case_10']
+    #del inputs_two['CUP-Pairs8']
+    #del inputs_two['SFRC01073']['pcgr']
+    #del inputs_two['COLO829_2']['manta']
 
     # Match samples between runs and also input files
     samples_matched, inputs_matched = match_inputs(inputs_one, inputs_two)
@@ -298,8 +308,14 @@ def write_inputs(input_list, output_fp):
 def run_pipeline(inputs_fp, output_dir):
     # Start
     log.task_msg_title('Executing workflow')
+    workflow_fp = pathlib.Path(__file__).parent / 'workflow/pipeline.nf'
     p = subprocess.Popen(
-        f'./pipeline.nf --inputs_fp {inputs_fp} --output_dir {output_dir}',
+        f'''
+        {workflow_fp} \
+          --inputs_fp {inputs_fp} \
+          --output_dir {output_dir} \
+          -bucket-dir s3://umccr-temp-dev/stephen/nextflow_temp/
+        ''',
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         bufsize=1,
@@ -336,16 +352,22 @@ def run_pipeline(inputs_fp, output_dir):
             lines.append(f'    {line}')
     # Block until pipeline process exits
     p.wait()
+    # Check returncode
+    if p.returncode != 0:
+        stderr_str = ''.join(l for l in p.stderr)
+        log.render(f'error:\n{stderr_str}')
+        sys.exit(1)
 
 
 def render_report(output_dir):
     log.task_msg_title('Rendering RMarkdown report')
     log.render_newline()
     output_fp = output_dir / 'report.html'
+    lib_dir = pathlib.Path(__file__).parent / 'workflow/lib'
     rscript = textwrap.dedent(f'''
         library(rmarkdown)
         rmarkdown::render(
-          'lib/report.Rmd',
+          '{lib_dir / "report.Rmd"}',
           output_file='{output_fp.absolute()}',
           params=list(
             results_directory='{output_dir.absolute()}'
@@ -365,4 +387,4 @@ def render_report(output_dir):
 
 
 if __name__ == '__main__':
-    main()
+    entry()
