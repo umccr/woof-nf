@@ -30,7 +30,7 @@ software_dependencies = {
 }
 
 
-def check():
+def check(args):
     # Get tool status and render table
     log.task_msg_title('Checking dependencies')
     log.render('\nTool status:')
