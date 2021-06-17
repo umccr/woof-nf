@@ -10,9 +10,9 @@ def process_inputs(input_files) {
     (sample_name, variant_type, file_source, run_number, filepath) = d
     filepath = file(filepath)
     // Get flags (position/run one or two)
-    if (run_number == 'first') {
+    if (run_number == 'one') {
       flags = 0
-    } else if (run_number == 'second') {
+    } else if (run_number == 'two') {
       flags = FlagBits.PTWO
     } else {
      assert false

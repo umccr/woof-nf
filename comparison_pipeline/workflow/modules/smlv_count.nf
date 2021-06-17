@@ -7,7 +7,7 @@ process module_smlv_count {
 
   script:
   source = (flags & FlagBits.FILTERED) ? 'filtered' : 'input'
-  run = (flags & FlagBits.PTWO) ? 'second' : 'first'
+  run = (flags & FlagBits.PTWO) ? 'two' : 'one'
   uuid = UUID.randomUUID().toString()
   filename = "${uuid}.tsv"
   """

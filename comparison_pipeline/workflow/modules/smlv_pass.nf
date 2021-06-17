@@ -11,7 +11,7 @@ process module_smlv_pass {
   // Unset has_index and set not filtered flag
   flags_out = (flags_in & ~FlagBits.INDEXED)
   flags_out = (flags_out ^ FlagBits.FILTERED)
-  run = (flags_in & FlagBits.PTWO) ? 'second' : 'first'
+  run = (flags_in & FlagBits.PTWO) ? 'two' : 'one'
   filename = "${vcf_type}__${run}__filtered__${vcf.getSimpleName()}"
   """
   {

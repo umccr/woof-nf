@@ -58,13 +58,13 @@ get_smlv_summary_data <- function(s.base_dir) {
 
   # Process counts data
   # 1. remove intersect VCFS - identified by run == 'n/a'
-  # 2. recode values: source: input -> all; run: first -> run1_count, second -> run2_count
-  # 3. cast to wider format - remove filename col; add first and second columns
+  # 2. recode values: source: input -> all; run: one -> run1_count, two -> run2_count
+  # 3. cast to wider format - remove filename col; add `one` and `two` columns
   d.counts_wide <- d.counts %>%
     dplyr::filter(run!='n/a') %>%
     dplyr::mutate(
       source=dplyr::recode(source, input='all'),
-      run=dplyr::recode(run, first='run1_count', second='run2_count'),
+      run=dplyr::recode(run, one='run1_count', two='run2_count'),
     ) %>%
     tidyr::pivot_wider(names_from=run, id_cols=c(vcf_type, source), values_from=count)
 
