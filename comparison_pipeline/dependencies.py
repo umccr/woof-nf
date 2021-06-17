@@ -6,6 +6,7 @@ import sys
 
 
 from . import log
+from . import table
 
 
 software_dependencies = {
@@ -44,7 +45,7 @@ def check(docker):
         else:
             tool_status = get_tool_status(tool)
         tool_status_results.append(tool_status)
-    csizes = get_column_sizes(tool_status_results)
+    csizes = table.get_column_sizes(tool_status_results)
     missing_errors = render_dependency_table(tool_status_results, csizes)
     # If incompatible/missing tools, print info and exit
     if missing_errors:
@@ -86,21 +87,6 @@ def get_tool_status(tool):
     else:
         status = 'good'
     return tool, version, status
-
-
-def get_column_sizes(rows):
-    # Calculate column size
-    csizes = list()
-    for column_items in zip(*rows):
-        clargest = max(len(t) for t in column_items)
-        # Set to be at least n character in length
-        # Otherwise, round up to closest multiple of 4
-        if clargest < 12:
-            csizes.append(12)
-        else:
-            csize = clargest + (4 - clargest % 4)
-            csizes.append(csize)
-    return csizes
 
 
 def render_dependency_table(tool_status_results, csizes):
