@@ -36,7 +36,7 @@ def entry():
     log.render(f'  resume: {"yes" if args.resume else "no"}\n')
 
     # Check dependencies
-    dependencies.check(args.executor)
+    dependencies.check(args.docker)
 
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
