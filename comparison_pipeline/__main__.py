@@ -39,8 +39,8 @@ def entry():
     dependencies.check(args.executor)
 
     # Get inputs and write to file
-    input_list = umccrise.get_inputs(args.run_dir_one, args.run_dir_two)
-    inputs_fp = inputs.write(input_list, args.output_dir / 'input_files.tsv')
+    input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
+    inputs_fp = inputs.write(input_data, args.output_dir / 'input_files.tsv')
 
     # Execute pipeline
     workflow.run(
