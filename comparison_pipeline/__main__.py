@@ -17,16 +17,16 @@ def entry():
 
     # Print entry
     # TODO: further description of what will be done
-    msg_body_text = (
-        'Welcome to the UMCCR comparison pipeline\n'
-    )
     log.task_msg_title('Starting comparison pipeline')
-    log.task_msg_body(msg_body_text)
+    log.task_msg_body('Welcome to the UMCCR comparison pipeline\n')
 
     # Get and check command line arguments
     args = arguments.collect()
     args = arguments.check_and_process(args)
 
+    # Log some info to console
+    log.task_msg_title('Logging pipeline configuration')
+    log.render_newline()
     log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
     log.render('Info:')
     log.render(f'  version: {__version__}')
