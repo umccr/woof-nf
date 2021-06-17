@@ -1,5 +1,6 @@
-bcftools=1.12
+bcftools==1.12
 circos
+python>=3.7
 r-bedr
 r-dt
 r-glue
