@@ -287,10 +287,6 @@ def render_matched_table(rows, file_columns_display):
 
 
 def write(input_data, output_fp):
-    # Create output directory if it does not already exist
-    output_dir = output_fp.parent
-    if not output_dir.exists():
-        output_dir.mkdir(parents=True, exist_ok=True)
     # NOTE: only umccrise currently implemented
     sources_unimpl = {'umccrise'} ^ set(input_data)
     if sources_unimpl:

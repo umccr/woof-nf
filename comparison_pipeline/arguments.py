@@ -63,6 +63,10 @@ def check_and_process(args):
 
     # Check valid filepaths for output_dir and log_fp
 
+    # Create output directory if it does not already exist
+    if not args.output_dir.exists():
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+
     if args.log_fp == None:
         args.log_fp = args.output_dir / 'pipeline_log.txt'
         log.setup_log_file(args.log_fp)
