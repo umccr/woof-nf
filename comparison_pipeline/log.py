@@ -25,6 +25,21 @@ NO_ANSI = False
 ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
+# In order to capture log messages prior to setting up the log file, we buffer them here
+BUFFER_LOG_MESSAGES = True
+LOG_BUFFER = list()
+LOG_FH = None
+
+
+def setup_log_file(log_fp):
+    global BUFFER_LOG_MESSAGES
+    global LOG_FH
+    LOG_FH = log_fp.open('w')
+    BUFFER_LOG_MESSAGES = False
+    for text, title, kargs in LOG_BUFFER:
+        render(text, title=title, **kargs, log_file_only=True)
+
+
 def ftext(text, c=None, f=None):
     ftext = f'{text}{END}'
     # Colour
@@ -58,9 +73,20 @@ def ftext(text, c=None, f=None):
     return ftext
 
 
-def render(text, ts=False, **kargs):
+def render(text, ts=False, title=False, log_file_only=False, **kargs):
     if ts:
         text = f'{text} {get_timestamp()}'
+    # Log file
+    if BUFFER_LOG_MESSAGES:
+        LOG_BUFFER.append((text, title, kargs))
+    else:
+        text_log = ANSI_ESCAPE.sub('', text)
+        print(text_log, **kargs, file=LOG_FH, flush=True)
+        if title:
+            print('-' * len(text_log), file=LOG_FH, flush=True)
+    if log_file_only:
+        return
+    # Console
     if NO_ANSI:
         print(ANSI_ESCAPE.sub('', text), **kargs)
     else:
@@ -68,7 +94,7 @@ def render(text, ts=False, **kargs):
 
 
 def task_msg_title(text):
-    render(ftext(text, c='blue', f='underline'), ts=True)
+    render(ftext(text, c='blue', f='underline'), ts=True, title=True)
 
 
 def task_msg_body(text):

@@ -30,6 +30,11 @@ def collect():
         help='Output directory'
     )
     parser.add_argument(
+        '--log_fp',
+        type=pathlib.Path,
+        help='Log filepath (default: <output_dir>/pipeline_log.txt)'
+    )
+    parser.add_argument(
         '--executor',
         choices=('local', 'aws'),
         default='local',
@@ -55,6 +60,10 @@ def collect():
 def check_and_process(args):
     log.task_msg_title('Checking arguments')
     log.task_msg_body('Not yet fully implemented - hold on to your seats!\n')
+
+    if args.log_fp == None:
+        args.log_fp = args.output_dir / 'pipeline_log.txt'
+        log.setup_log_file(args.log_fp)
 
     if args.executor == 'aws' and not args.s3_bucket:
         msg = '--s3_bucket <bucket_uri> is required when using the aws executor'
