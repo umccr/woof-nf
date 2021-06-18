@@ -38,7 +38,7 @@ def collect():
         '--executor',
         choices=('local', 'aws'),
         default='local',
-        help='Workflow executor'
+        help='Workflow executor (default: local)'
     )
     parser.add_argument(
         '--s3_bucket',
@@ -61,6 +61,8 @@ def check_and_process(args):
     log.task_msg_title('Checking arguments')
     log.task_msg_body('Not yet fully implemented - hold on to your seats!\n')
 
+    # Check valid filepaths for output_dir and log_fp
+
     if args.log_fp == None:
         args.log_fp = args.output_dir / 'pipeline_log.txt'
         log.setup_log_file(args.log_fp)
@@ -78,6 +80,4 @@ def check_and_process(args):
     if args.executor == 'aws' and not args.docker:
         log.render('info: aws executor requires docker but wasn\'t explicitly set, forcing')
         args.docker = True
-    log.render_newline()
-
     return args
