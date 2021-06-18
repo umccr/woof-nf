@@ -11,18 +11,18 @@ from . import table
 
 
 software_dependencies = {
-    'circos': {
-        'min': '0.69-8',
-        'max': None,
-        'arg': '-v',
-        'regex': '^circos \| v ([0-9.-]+)',
-        'dockerised': True,
-    },
     'bcftools': {
         'min': '1.12',
         'max': None,
         'arg': '-v',
         'regex': '^^bcftools ([0-9.]+)',
+        'dockerised': True,
+    },
+    'circos': {
+        'min': '0.69-8',
+        'max': None,
+        'arg': '-v',
+        'regex': '^circos \| v ([0-9.-]+)',
         'dockerised': True,
     },
     'nextflow': {
