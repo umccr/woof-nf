@@ -19,7 +19,7 @@ def create_configuration(inputs_fp, output_dir, docker, executor):
     config_lines.append('// Executor')
     if executor == 'aws':
         config_lines.append('process.executor = "awsbatch"')
-        config_lines.append('process.queue = "nextflow-testing-job-queue"')
+        config_lines.append('process.queue = "nextflow-job-queue"')
         config_lines.append('aws.region = "ap-southeast-2"')
     elif executor == 'local':
         config_lines.append('process.executor = "local"')

@@ -1,0 +1,101 @@
+Resources:
+  NextflowSpotFleetTaggingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - spotfleet.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole
+      Tags:
+        - Key: Creator
+          Value: cdf
+        - Key: Stack
+          Value: nextflow
+        - Key: Owner
+          Value: swatts
+
+  NextflowBatchInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+      Tags:
+        - Key: Creator
+          Value: cdf
+        - Key: Stack
+          Value: nextflow
+        - Key: Owner
+          Value: swatts
+
+  NextflowBatchInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref NextflowBatchInstanceRole
+
+  NextflowBatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName: nextflow-compute-environment
+      ComputeResources:
+        AllocationStrategy: 'BEST_FIT'
+        BidPercentage: 100
+        DesiredvCpus: 0
+        InstanceRole: !GetAtt NextflowBatchInstanceProfile.Arn
+        InstanceTypes:
+          - optimal
+        MaxvCpus: 64
+        MinvCpus: 0
+        SecurityGroupIds:
+          # Outbound traffic only
+          - sg-0e4269cd9c7c1765a
+        SpotIamFleetRole: !GetAtt NextflowSpotFleetTaggingRole.Arn
+        Subnets:
+          # ap-southeast-2a with public IPv4 assignment
+          - subnet-0fab038b0341872f1
+        Tags: {
+          "Creator": "cdf",
+          "Stack": "nextflow",
+          "Owner": "scwatts"
+        }
+        Type: SPOT
+      State: ENABLED
+      Tags: {
+        "Creator": "cdf",
+        "Stack": "nextflow",
+        "Owner": "scwatts"
+      }
+      Type: MANAGED
+
+  NextflowBatchJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref NextflowBatchComputeEnvironment
+      JobQueueName: nextflow-job-queue
+      Priority: 1
+      State: ENABLED
+      Tags: {
+        "Creator": "cdf",
+        "Stack": "nextflow",
+        "Owner": "scwatts"
+      }
