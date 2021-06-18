@@ -106,7 +106,7 @@ def collect(dir_one, dir_two):
 
 
 def log_input_directories(dirpaths, n):
-    log.render(f'  set {n}:')
+    log.render(f'  Set {n}:')
     for dirpath in dirpaths:
         log.render(f'    {dirpath}')
 
