@@ -206,9 +206,8 @@ def render_output(title, executor, processes, files_uploading, errors, lines_dis
         lines.append('\n')
     # Remove empty lines
     lines = [line for line in lines if line]
-    # Select lines to display; at most all available terminal lines except one
-    lines_print = min(term_size.lines - 1, len(lines))
-    # Get actual number of lines that will be displayed, account for line wrapping
+    # Set max display lines, get actual number of lines that will be displayed while accounting for line wrapping
+    lines_print_max = term_size.lines - 1
     line_sizes = [len(l) - 1 for l in lines]
     lines_actual = get_actual_lines(line_sizes, term_size)
     # Select lines to display such that we don't exceed number of available lines
@@ -216,7 +215,7 @@ def render_output(title, executor, processes, files_uploading, errors, lines_dis
     lines_actual_sum = 0
     for i, la in enumerate(lines_actual[::-1], 1):
         lines_actual_sum += la
-        if lines_actual_sum > lines_print:
+        if lines_actual_sum > lines_print_max:
             break
         line_index = i
     # If the terminal is too small to display normal messages, indicate. Otherwise display nf
