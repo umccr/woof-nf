@@ -40,8 +40,10 @@ software_dependencies = {
         'context': {'docker'},
     },
     'nextflow': {
+        # Strictly requiring this version as I've rigidly coded streaming of nf stdout
+        # May break between even minor releases
         'min': '21.04.0',
-        'max': None,
+        'max': '21.04.0',
         'arg': '-version',
         'regex': '^.+version ([0-9.]+) build',
     },
