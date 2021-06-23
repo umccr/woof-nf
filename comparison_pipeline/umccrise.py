@@ -31,7 +31,6 @@ column_name_mapping = {
 
 
 def process_input_directory(dirpath, run):
-    # source -> InputFile
     directory_inputs = list()
     for input_name, (subdir, suffix) in inputs_list.items():
         # Construct full glob expression, iterate matches

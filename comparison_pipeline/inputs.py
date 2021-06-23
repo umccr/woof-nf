@@ -189,7 +189,7 @@ def determine_match_status(sample_files):
             for file_set in file_dict.values():
                 if isinstance(file_set.file_one, InputFile):
                     run_one += 1
-                elif isinstance(file_set.file_one, InputFile):
+                elif isinstance(file_set.file_two, InputFile):
                     run_two += 1
                 else:
                     assert False
@@ -213,8 +213,8 @@ def create_matched_table(source_data, columns):
         row_two = ['', '2', '']
         sample_files = source_data.file_list[sample_name]
         for filetype in columns:
-            exist_one = isinstance(sample_files[filetype].file_one, InputFile)
-            exist_two = isinstance(sample_files[filetype].file_two, InputFile)
+            exist_one = filetype in sample_files and isinstance(sample_files[filetype].file_one, InputFile)
+            exist_two = filetype in sample_files and isinstance(sample_files[filetype].file_two, InputFile)
             # Set symbol and symbol colour
             if exist_one and not exist_two:
                 sym_one = tick_grey
