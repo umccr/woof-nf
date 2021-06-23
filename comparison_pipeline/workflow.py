@@ -17,6 +17,13 @@ process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 staging_line_re = re.compile(r'^Staging foreign file: (.+)$')
 bin_upload_line_re = re.compile(r'^Uploading local `bin` scripts.+$')
 
+aws_completion = [
+    'Completed at:',
+    'Duration    :',
+    'CPU hours   :',
+    'Succeeded   :'
+]
+
 
 def create_configuration(inputs_fp, output_dir, docker, executor):
     # Get configuration
@@ -60,6 +67,7 @@ def run(inputs_fp, output_dir, resume, docker, executor, bucket):
     workflow_fp = pathlib.Path(__file__).parent / 'workflow/pipeline.nf'
     command = f'{workflow_fp} {args_str}'
     log.render(log.ftext(f'\nCommand: {command}', f='bold'))
+    log.render('\nNextflow output:\n')
     # Start
     p = subprocess.Popen(
         command,
@@ -73,22 +81,34 @@ def run(inputs_fp, output_dir, resume, docker, executor, bucket):
     errors = render_nextflow_lines(p)
     # Block until pipeline process exits
     p.wait()
-    # Check returncode
-    if p.returncode != 0:
+    # Print errors
+    if errors:
         error_str = ''.join(errors)
         log.render(error_str)
+    # Propagate erroneous return code
+    if p.returncode != 0:
         sys.exit(1)
 
 
 def render_nextflow_lines(p):
+    # Line store
     title = str()
     executor = str()
     processes = dict()
     errors = list()
-
+    # Line size and display count
     line_sizes = list()
-
+    lines_displayed = 0
+    # AWS file staging
+    files_uploading = list()
+    # We prevent re-rendering in case of multiple newlines with this flag
+    newline_previous = False
+    # Process lines
     for line in p.stdout:
+        # If allow re-rendering if current line and last are not newlines
+        if line != '\n' and newline_previous:
+            newline_previous = False
+        # Begin main line handling
         if line.startswith('N E X T F L O W'):
             title = f'    {line}'
         elif line.startswith('Launching') or line.startswith('executor >'):
@@ -98,21 +118,31 @@ def render_nextflow_lines(p):
             processes[process_name] = f'    {line}'
         elif aws_staging_match := staging_line_re.match(line):
             staging_file = aws_staging_match.group(1)
-
+            files_uploading.append(staging_file)
         elif bin_upload_match := bin_upload_line_re.match(line):
+            # Not considered important
             pass
-
-        elif line == '\n':
+        elif any(line.startswith(p) for p in aws_completion):
+            # Not considered important - completion status, only present with AWS
+            pass
+        elif line == '\n' and not newline_previous:
             term_size = shutil.get_terminal_size()
             lines_displayed = sum(get_actual_lines(line_sizes, term_size))
             line_sizes = render_output(
                 title,
                 executor,
                 processes,
+                files_uploading,
                 errors,
                 lines_displayed,
                 term_size
             )
+            # Clear files uploading and set previous newline variable
+            files_uploading = list()
+            newline_previous = True
+        elif line.rstrip() == '':
+            # AWS nf plugin produces lines containing only spaces, ignore
+            pass
         else:
             errors.append(f'    {line}')
     # Clear output so we can print full and final text
@@ -145,7 +175,7 @@ def clear_terminal(term_size, lines_displayed):
         sys.stdout.write('\u001b[0J')
 
 
-def render_output(title, executor, processes, errors, lines_displayed, term_size):
+def render_output(title, executor, processes, files_uploading, errors, lines_displayed, term_size):
     # Clear terminal
     clear_terminal(term_size, lines_displayed)
     # Prepare new lines
@@ -153,11 +183,16 @@ def render_output(title, executor, processes, errors, lines_displayed, term_size
     lines.append(title)
     lines.append(executor)
     lines.extend(processes.values())
+    if files_uploading:
+        lines.append('\n')
+        files_n = len(files_uploading)
+        plurality = 'file' if files_n == 1 else 'files'
+        lines.append(f'Currently uploading {len(files_uploading)} {plurality} to S3\n')
     lines.append('\n')
     if errors:
         lines.append(
-            'Errors encountered - check <file> for further information!'
-            ' Details will be printed at conclusion of workflow run.\n'
+            'Errors encountered - check .nextflow.log for further information!'
+            ' Further details will be printed at conclusion of workflow run.\n'
         )
         lines.append('\n')
     # Select lines to display; at most all available terminal lines except one
