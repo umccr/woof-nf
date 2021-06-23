@@ -11,6 +11,13 @@ from . import table
 
 
 software_dependencies = {
+    'aws': {
+        'min': '2.0.0',
+        'max': None,
+        'arg': '--version',
+        'regex': '^aws-cli/([0-9.]+)',
+        'context': {'aws_executor'},
+    },
     'bcftools': {
         'min': '1.12',
         'max': None,
@@ -25,12 +32,18 @@ software_dependencies = {
         'regex': '^circos \| v ([0-9.-]+)',
         'dockerised': True,
     },
+    'docker': {
+        'min': '20.00.0',
+        'max': None,
+        'arg': '--version',
+        'regex': '^Docker version ([0-9.]+)',
+        'context': {'docker'},
+    },
     'nextflow': {
         'min': '21.04.0',
         'max': None,
         'arg': '-version',
         'regex': '^.+version ([0-9.]+) build',
-        'dockerised': False,
     },
     'R': {
         'min': '4.0.0',
@@ -51,20 +64,29 @@ r_packages = (
 )
 
 
-def check(docker):
+def check(executor, docker):
     # Check software tools and then R packages. Logic to determine presence of R packages
     # considerably different and so is separated
     # When docker is set to be used, only check for dependencies required to launch tasks
     log.task_msg_title('Checking dependencies')
-    check_tools(docker)
+    check_tools(executor, docker)
     check_rpackages(docker)
 
 
-def check_tools(docker):
+def check_tools(executor, docker):
     log.render('\nTool status:')
     tool_status_results = list()
     for tool in software_dependencies:
-        if docker and software_dependencies[tool]['dockerised']:
+        # aws-cli: aws executor only
+        if executor != 'aws' and 'aws_executor' in software_dependencies[tool].get('context', set()):
+            tool_status = (tool, '-', 'not used')
+        # docker: with local executor + docker only
+        elif executor != 'local' and 'docker' in software_dependencies[tool].get('context', set()):
+            tool_status = (tool, '-', 'not used')
+        elif not docker and 'docker' in software_dependencies[tool].get('context', set()):
+            tool_status = (tool, '-', 'not used')
+        # dockerised software: with local executor + *not* docker only
+        elif docker and software_dependencies[tool].get('dockerised', False):
             tool_status = (tool, '-', 'docker')
         else:
             tool_status = get_tool_status(tool)
@@ -123,6 +145,9 @@ def render_dependency_table(tool_status_results, csizes):
             row_just[-1] = log.ftext(row_just[-1], c='green')
             log.render('  ' + ''.join(row_just))
         elif row[-1] == 'docker':
+            row_just[-1] = log.ftext(row_just[-1], c='black')
+            log.render('  ' + ''.join(row_just))
+        elif row[-1] == 'not used':
             row_just[-1] = log.ftext(row_just[-1], c='black')
             log.render('  ' + ''.join(row_just))
         elif row[-1] in {'not found', 'too old', 'too new'}:

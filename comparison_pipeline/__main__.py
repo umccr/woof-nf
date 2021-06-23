@@ -33,7 +33,7 @@ def entry():
     log.render_newline()
 
     # Check dependencies
-    dependencies.check(args.docker)
+    dependencies.check(args.executor, args.docker)
 
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
