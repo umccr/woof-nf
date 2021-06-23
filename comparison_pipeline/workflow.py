@@ -103,6 +103,7 @@ def render_nextflow_lines(p):
     files_uploading = list()
     # We prevent re-rendering in case of multiple newlines with this flag
     newline_previous = False
+    splash = True
     # Process lines
     for line in p.stdout:
         # If allow re-rendering if current line and last are not newlines
@@ -125,7 +126,18 @@ def render_nextflow_lines(p):
         elif any(line.startswith(p) for p in aws_completion):
             # Not considered important - completion status, only present with AWS
             pass
-        elif line == '\n' and not newline_previous:
+        elif line == '\n':
+            # Ignore here, used to decide when to render below
+            pass
+        elif line.rstrip() == '':
+            # AWS nf plugin produces lines containing only spaces, ignore
+            pass
+        else:
+            errors.append(f'    {line}')
+        # Render when:
+        #   - end of 'process' block (general case)
+        #   - first pass to allow quick header/splash display
+        if (line == '\n' and not newline_previous) or splash:
             term_size = shutil.get_terminal_size()
             lines_displayed = sum(get_actual_lines(line_sizes, term_size))
             line_sizes = render_output(
@@ -140,11 +152,8 @@ def render_nextflow_lines(p):
             # Clear files uploading and set previous newline variable
             files_uploading = list()
             newline_previous = True
-        elif line.rstrip() == '':
-            # AWS nf plugin produces lines containing only spaces, ignore
-            pass
-        else:
-            errors.append(f'    {line}')
+        # Disable splash if we have both title and executor
+        splash = not (title and executor)
     # Clear output so we can print full and final text
     term_size = shutil.get_terminal_size()
     clear_terminal(term_size, lines_displayed)
@@ -195,6 +204,8 @@ def render_output(title, executor, processes, files_uploading, errors, lines_dis
             ' Further details will be printed at conclusion of workflow run.\n'
         )
         lines.append('\n')
+    # Remove empty lines
+    lines = [line for line in lines if line]
     # Select lines to display; at most all available terminal lines except one
     lines_print = min(term_size.lines - 1, len(lines))
     # Get actual number of lines that will be displayed, account for line wrapping
