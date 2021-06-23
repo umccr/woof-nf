@@ -6,10 +6,12 @@ import subprocess
 import sys
 
 
+from . import aws
 from . import log
 
 
-docker_uri = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com/comparison_pipeline:0.0.1'
+docker_provider = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
+docker_uri = f'{docker_provider}/{aws.ecr_repo}:{aws.ecr_image_tag}'
 
 process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (.+?) [()0-9 -]+.*$')
 staging_line_re = re.compile(r'^Staging foreign file: (.+)$')
@@ -26,8 +28,8 @@ def create_configuration(inputs_fp, output_dir, docker, executor):
     config_lines.append('// Executor')
     if executor == 'aws':
         config_lines.append('process.executor = "awsbatch"')
-        config_lines.append('process.queue = "nextflow-job-queue"')
-        config_lines.append('aws.region = "ap-southeast-2"')
+        config_lines.append(f'process.queue = "{aws.batch_queue}"')
+        config_lines.append(f'aws.region = "{aws.region}"')
     elif executor == 'local':
         config_lines.append('process.executor = "local"')
     else:

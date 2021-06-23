@@ -3,6 +3,7 @@ import sys
 
 
 from . import arguments
+from . import aws
 from . import dependencies
 from . import information
 from . import inputs
@@ -32,8 +33,9 @@ def entry():
     information.render_info_table(args)
     log.render_newline()
 
-    # Check dependencies
+    # Check dependencies, and test AWS auth and config if needed
     dependencies.check(args.executor, args.docker)
+    if args.executor == 'aws': aws.check_config()
 
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
