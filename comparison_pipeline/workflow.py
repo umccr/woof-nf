@@ -13,7 +13,7 @@ from . import log
 docker_provider = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
 docker_uri = f'{docker_provider}/{aws.ecr_repo}:{aws.ecr_image_tag}'
 
-process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (.+?) [()0-9 -]+.*$')
+process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 staging_line_re = re.compile(r'^Staging foreign file: (.+)$')
 bin_upload_line_re = re.compile(r'^Uploading local `bin` scripts.+$')
 
