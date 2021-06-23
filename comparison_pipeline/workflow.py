@@ -10,8 +10,7 @@ from . import aws
 from . import log
 
 
-docker_provider = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
-docker_uri = f'{docker_provider}/{aws.ecr_repo}:{aws.ecr_image_tag}'
+docker_uri = f'{aws.ecr_base_uri}/{aws.ecr_repo}:{aws.ecr_image_tag}'
 
 process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 staging_line_re = re.compile(r'^Staging foreign file: (.+)$')

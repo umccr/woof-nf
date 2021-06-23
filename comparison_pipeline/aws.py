@@ -7,6 +7,7 @@ from . import log
 
 region = 'ap-southeast-2'
 batch_queue = 'nextflow-job-queue'
+ecr_base_uri = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
 ecr_repo = 'comparison_pipeline'
 ecr_image_tag = '0.0.1'
 
