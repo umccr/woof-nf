@@ -30,7 +30,7 @@ def entry():
     log.render_newline()
     log.render(log.ftext(f'Command: {" ".join(sys.argv)}\n', f='bold'))
     log.render('Info:')
-    information.render_info_table(args)
+    information.render_table(args)
     log.render_newline()
 
     # Check dependencies, and test AWS auth and config if needed

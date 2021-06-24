@@ -3,6 +3,7 @@ import sys
 
 
 from . import log
+from . import table
 from . import umccrise
 
 
@@ -95,13 +96,13 @@ def collect(dir_one, dir_two):
             raise NotImplemented
         elif source_name == 'plain':
             raise NotImplemented
-        matched_table = create_matched_table(source_data, columns)
+        rows = prepare_rows(source_data, columns, columns_display_name)
         # Print log message and table
         samples_matched_n = len(source_data.samples_matched)
         samples_all_n = len(source_data.samples_matched) + len(source_data.samples_unmatched)
         log.render(log.ftext('UMCCRISE:', f='bold'))
         log.render(f'  Matched {samples_matched_n} of {samples_all_n} samples:')
-        render_matched_table(matched_table, columns_display_name)
+        table.render_table(rows)
     return file_data
 
 
@@ -200,17 +201,28 @@ def determine_match_status(sample_files):
     return samples_matched, samples_unmatched_one, samples_unmatched_two
 
 
-def create_matched_table(source_data, columns):
+def prepare_rows(source_data, columns, file_columns_display):
     # Define symbols
-    tick_green = log.ftext('✓', c='green')
-    tick_grey = log.ftext('✓', c='black')
-    cross = log.ftext('⨯', c='red')
-    # Create rows for matched pairs
+    tick_green = table.Cell('✓', just='c', c='green')
+    tick_grey = table.Cell('✓', just='c', c='black')
+    cross = table.Cell('⨯', just='c', c='red')
+    # Header
     rows = list()
+    file_column_header_cells = [table.Cell(t, just='c') for t in file_columns_display]
+    header_cells = [
+        'Sample name',
+        table.Cell('Set', just='c'),
+        table.Cell('Matched', just='c'),
+        *file_column_header_cells
+    ]
+    header_row = table.Row(header_cells, header=True)
+    rows.append(header_row)
+    # Body
+    # Create rows for matched pairs
     for sample_name in sorted(source_data.samples_matched):
         # Only have sample appear on first line for matched pairs
-        row_one = [sample_name, '1', tick_green]
-        row_two = ['', '2', '']
+        row_one = [sample_name, table.Cell('1', just='c'), tick_green]
+        row_two = ['', table.Cell('2', just='c'), table.Cell('', just='c')]
         sample_files = source_data.file_list[sample_name]
         for filetype in columns:
             exist_one = filetype in sample_files and isinstance(sample_files[filetype].file_one, InputFile)
@@ -228,62 +240,25 @@ def create_matched_table(source_data, columns):
                 sym_one = sym_two = cross
             row_one.append(sym_one)
             row_two.append(sym_two)
-        rows.append((row_one, row_two))
+        rows.append(table.Row(row_one))
+        rows.append(table.Row(row_two))
     # Create rows for samples without matches
     for sample_name in sorted(source_data.samples_unmatched):
         # Get appropriate set
-        row = [log.ftext(sample_name, c='red')]
+        cell_list = [table.Cell(sample_name, c='red')]
         if sample_name in source_data.samples_unmatched_one:
-            row.append('1')
+            cell_list.append(table.Cell('1', just='c'))
         elif sample_name in source_data.samples_unmatched_two:
-            row.append('2')
+            cell_list.append(table.Cell('2', just='c'))
         # Cross to indicate match status
-        row.append(cross)
+        cell_list.append(cross)
         for file_type in columns:
-            row.append(tick_green if file_type in source_data.file_list[sample_name] else cross)
-        rows.append((row, ))
+            if file_type in source_data.file_list[sample_name]:
+                cell_list.append(tick_green)
+            else:
+                cell_list.append(cross)
+        rows.append(table.Row(cell_list))
     return rows
-
-
-def render_matched_table(rows, file_columns_display):
-    # Set header
-    header_tokens = ('Sample name', 'Set', 'Matched', *file_columns_display)
-    # Min file column width; then set to header token
-    # Get column sizes
-    largest_sample = max(len(r[0]) for rs in rows for r in rs)
-    csize_first = largest_sample + (4 - largest_sample % 4)
-    csizes = [csize_first]
-    for file_type in ['Set', 'Matched', *file_columns_display]:
-        # Subtracting one for left-dominant centering on even lengths
-        if len(file_type) < 8:
-            csizes.append(8 - 1)
-        else:
-            csize = len(file_type) + (4 - len(file_type) % 4) - 1
-            csizes.append(csize)
-    # Render header
-    log.render('  ', end='')
-    for token, csize in zip(header_tokens, csizes):
-        log.render(log.ftext(token.center(csize), f='underline'), end='')
-    log.render_newline()
-    # Render rows
-    for row_set in rows:
-        for row in row_set:
-            # Adjust csize padding to account for ansi escape codes
-            # NOTE: some further considerations may be required here when log.ANSI_CODES = False
-            row_just = list()
-            column_number = 0
-            for csize, text in zip(csizes, row):
-                # Exclude second matched sample name from table; replace with empty space
-                column_number += 1
-                ansi_ec_size = len(text) - len(log.ANSI_ESCAPE.sub('', text))
-                csize += ansi_ec_size
-                if column_number == 1:
-                    row_just.append(text.ljust(csize))
-                else:
-                    row_just.append(text.center(csize))
-            row_text = ''.join(row_just)
-            log.render('  ' + row_text)
-    log.render_newline()
 
 
 def write(input_data, output_fp):

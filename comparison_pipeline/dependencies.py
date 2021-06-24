@@ -93,8 +93,10 @@ def check_tools(executor, docker):
         else:
             tool_status = get_tool_status(tool)
         tool_status_results.append(tool_status)
-    csizes = table.get_column_sizes(tool_status_results)
-    missing_errors = render_dependency_table(tool_status_results, csizes)
+    # Prepare rows and render
+    rows, missing_errors = prepare_tool_status_rows(tool_status_results)
+    table.render_table(rows)
+    log.render_newline()
     if missing_errors:
         print_missing_error(missing_errors)
 
@@ -132,32 +134,28 @@ def get_tool_status(tool):
     return tool, version, status
 
 
-def render_dependency_table(tool_status_results, csizes):
-    # Render header
-    header_tokens = ('Program', 'Version', 'Status')
-    log.render('  ', end='')
-    for token, csize in zip(header_tokens, csizes):
-        log.render(log.ftext(token.ljust(csize), f='underline'), end='')
-    log.render_newline()
-    # Render rows
+def prepare_tool_status_rows(tool_status_results):
+    rows = list()
     missing_errors = list()
-    for row in tool_status_results:
-        row_just = [text.ljust(csize) for csize, text in zip(csizes, row)]
-        if row[-1] == 'good':
-            row_just[-1] = log.ftext(row_just[-1], c='green')
-            log.render('  ' + ''.join(row_just))
-        elif row[-1] == 'docker':
-            row_just[-1] = log.ftext(row_just[-1], c='black')
-            log.render('  ' + ''.join(row_just))
-        elif row[-1] == 'not used':
-            row_just[-1] = log.ftext(row_just[-1], c='black')
-            log.render('  ' + ''.join(row_just))
-        elif row[-1] in {'not found', 'too old', 'too new'}:
+    # Header
+    header_row = table.Row(('Program', 'Version', 'Status'), header=True)
+    rows.append(header_row)
+    # Body text
+    for texts in tool_status_results:
+        row = table.Row(texts)
+        status_cell = row.cells[-1]
+        status = status_cell.text
+        if status == 'good':
+            status_cell.c = 'green'
+        elif status == 'docker':
+            status_cell.c = 'black'
+        elif status == 'not used':
+            status_cell.c = 'black'
+        elif status in {'not found', 'too old', 'too new'}:
             # Output text
-            row_text = log.ftext(''.join(row_just), c='red')
-            log.render('  ' + row_text)
+            table.set_row_colour(row, 'red')
             # Record error
-            tool = row[0]
+            tool = row.cells[0].text
             tool_reqs = software_dependencies[tool]
             if tool_reqs['min'] and tool_reqs['max']:
                 # between a - b
@@ -169,21 +167,26 @@ def render_dependency_table(tool_status_results, csizes):
                 # a or older
                 msg = f'{tool} version {tool_reqs["max"]} or older'
             missing_errors.append(msg)
-    log.render_newline()
-    return missing_errors
+        else:
+            assert False
+        rows.append(row)
+    return rows, missing_errors
 
 
 def check_rpackages(docker):
     log.render('R package status:')
     if docker:
         missing_errors = None
-        rpackage_status = list()
+        rpackage_status_results = list()
         for package in r_packages:
-            rpackage_status.append((package, log.ftext('docker', c='black')))
+            rpackage_status_results.append((package, 'docker'))
     else:
-        rpackage_status, missing_errors = get_rpackage_status()
-    csizes = table.get_column_sizes(rpackage_status)
-    render_rpackage_table(rpackage_status, csizes)
+        rpackage_status_results, missing_errors = get_rpackage_status()
+    # Prepare and then render table rows
+    rows = prepare_rpackage_status_rows(rpackage_status_results)
+    log.render_newline()
+    table.render_table(rows)
+    log.render_newline()
     if missing_errors:
         print_missing_error(missing_errors)
 
@@ -216,23 +219,33 @@ def get_rpackage_status():
     package_status = list()
     for package in r_packages:
         if package in missing_packages:
-            status = log.ftext('not found', c='red')
+            status = 'not found'
         else:
-            status = log.ftext('good', c='green')
+            status = 'good'
         package_status.append((package, status))
     return package_status, missing_packages
 
 
-def render_rpackage_table(rpackage_status, csizes):
-    header_tokens = ('R package', 'Status')
-    log.render('  ', end='')
-    for token, csize in zip(header_tokens, csizes):
-        log.render(log.ftext(token.ljust(csize), f='underline'), end='')
-    log.render_newline()
-    for row in rpackage_status:
-        row_just = [text.ljust(csize) for csize, text in zip(csizes, row)]
-        log.render('  ' + ''.join(row_just))
-    log.render_newline()
+def prepare_rpackage_status_rows(rpackage_status_results):
+    rows = list()
+    # Header
+    header_row = table.Row(('R package', 'Status'), header=True)
+    rows.append(header_row)
+    # Body text
+    for texts in rpackage_status_results:
+        row = table.Row(texts)
+        status_cell = row.cells[-1]
+        status = status_cell.text
+        if status == 'good':
+            status_cell.c = 'green'
+        elif status == 'docker':
+            status_cell.c = 'black'
+        elif status == 'not found':
+            status_cell.c = 'red'
+        else:
+            assert False
+        rows.append(row)
+    return rows
 
 
 def print_missing_error(missing_errors):
