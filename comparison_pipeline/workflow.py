@@ -10,11 +10,11 @@ from . import aws
 from . import log
 
 
-docker_uri = f'{aws.ecr_base_uri}/{aws.ecr_repo}:{aws.ecr_image_tag}'
+DOCKER_URI = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
 
-process_line_re = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
-staging_line_re = re.compile(r'^Staging foreign file: (.+)$')
-bin_upload_line_re = re.compile(r'^Uploading local `bin` scripts.+$')
+PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
+STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
+BIN_UPLOAD_LINE_RE = re.compile(r'^Uploading local `bin` scripts.+$')
 
 aws_completion = [
     'Completed at:',
@@ -34,15 +34,15 @@ def create_configuration(inputs_fp, output_dir, docker, executor):
     config_lines.append('// Executor')
     if executor == 'aws':
         config_lines.append('process.executor = "awsbatch"')
-        config_lines.append(f'process.queue = "{aws.batch_queue}"')
-        config_lines.append(f'aws.region = "{aws.region}"')
+        config_lines.append(f'process.queue = "{aws.BATCH_QUEUE}"')
+        config_lines.append(f'aws.region = "{aws.REGION}"')
     elif executor == 'local':
         config_lines.append('process.executor = "local"')
     else:
         assert False
     if docker:
         config_lines.append('docker.enabled = true')
-        config_lines.append(f'process.container = "{docker_uri}"')
+        config_lines.append(f'process.container = "{DOCKER_URI}"')
     # Write to disk
     output_fp = output_dir / 'nextflow.config'
     with output_fp.open('w') as fh:
@@ -113,13 +113,13 @@ def render_nextflow_lines(p):
             title = f'    {line}'
         elif line.startswith('Launching') or line.startswith('executor >'):
             executor = f'    {line}'
-        elif process_match := process_line_re.match(line):
+        elif process_match := PROCESS_LINE_RE.match(line):
             process_name = process_match.group(1)
             processes[process_name] = f'    {line}'
-        elif aws_staging_match := staging_line_re.match(line):
+        elif aws_staging_match := STAGING_LINE_RE.match(line):
             staging_file = aws_staging_match.group(1)
             files_uploading.append(staging_file)
-        elif bin_upload_match := bin_upload_line_re.match(line):
+        elif bin_upload_match := BIN_UPLOAD_LINE_RE.match(line):
             # Not considered important
             pass
         elif any(line.startswith(p) for p in aws_completion):

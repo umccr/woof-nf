@@ -10,7 +10,7 @@ from . import log
 from . import table
 
 
-software_dependencies = {
+SOFTWARE_DEPENDENCIES = {
     'aws': {
         'min': '2.0.0',
         'max': None,
@@ -57,7 +57,7 @@ software_dependencies = {
 }
 
 # NOTE: not currently requiring specific versions
-r_packages = (
+R_PACKAGES = (
     'bedr',
     'DT',
     'glue',
@@ -78,17 +78,17 @@ def check(executor, docker):
 def check_tools(executor, docker):
     log.render('\nTool status:')
     tool_status_results = list()
-    for tool in software_dependencies:
+    for tool in SOFTWARE_DEPENDENCIES:
         # aws-cli: aws executor only
-        if executor != 'aws' and 'aws_executor' in software_dependencies[tool].get('context', set()):
+        if executor != 'aws' and 'aws_executor' in SOFTWARE_DEPENDENCIES[tool].get('context', set()):
             tool_status = (tool, '-', 'not used')
         # docker: with local executor + docker only
-        elif executor != 'local' and 'docker' in software_dependencies[tool].get('context', set()):
+        elif executor != 'local' and 'docker' in SOFTWARE_DEPENDENCIES[tool].get('context', set()):
             tool_status = (tool, '-', 'not used')
-        elif not docker and 'docker' in software_dependencies[tool].get('context', set()):
+        elif not docker and 'docker' in SOFTWARE_DEPENDENCIES[tool].get('context', set()):
             tool_status = (tool, '-', 'not used')
         # dockerised software: with local executor + *not* docker only
-        elif docker and software_dependencies[tool].get('dockerised', False):
+        elif docker and SOFTWARE_DEPENDENCIES[tool].get('dockerised', False):
             tool_status = (tool, '-', 'docker')
         else:
             tool_status = get_tool_status(tool)
@@ -102,10 +102,10 @@ def check_tools(executor, docker):
 
 
 def get_tool_status(tool):
-    version_arg = software_dependencies[tool]['arg']
-    version_regex = software_dependencies[tool]['regex']
-    min_version = software_dependencies[tool]['min']
-    max_version = software_dependencies[tool]['max']
+    version_arg = SOFTWARE_DEPENDENCIES[tool]['arg']
+    version_regex = SOFTWARE_DEPENDENCIES[tool]['regex']
+    min_version = SOFTWARE_DEPENDENCIES[tool]['min']
+    max_version = SOFTWARE_DEPENDENCIES[tool]['max']
     # Check tool is in PATH
     tool_path = shutil.which(tool)
     if tool_path == None:
@@ -156,7 +156,7 @@ def prepare_tool_status_rows(tool_status_results):
             table.set_row_colour(row, 'red')
             # Record error
             tool = row.cells[0].text
-            tool_reqs = software_dependencies[tool]
+            tool_reqs = SOFTWARE_DEPENDENCIES[tool]
             if tool_reqs['min'] and tool_reqs['max']:
                 # between a - b
                 msg = f'{tool} version between {tool_reqs["min"]} - {tool_reqs["max"]}'
@@ -178,7 +178,7 @@ def check_rpackages(docker):
     if docker:
         missing_errors = None
         rpackage_status_results = list()
-        for package in r_packages:
+        for package in R_PACKAGES:
             rpackage_status_results.append((package, 'docker'))
     else:
         rpackage_status_results, missing_errors = get_rpackage_status()
@@ -193,7 +193,7 @@ def check_rpackages(docker):
 
 def get_rpackage_status():
     packages_str = 'NULL'
-    for package in r_packages:
+    for package in R_PACKAGES:
         packages_str += f", '{package}'"
     rscript = textwrap.dedent(f'''
         v.packages <- setdiff(c({packages_str}), rownames(installed.packages()))
@@ -217,7 +217,7 @@ def get_rpackage_status():
     else:
         missing_packages = set()
     package_status = list()
-    for package in r_packages:
+    for package in R_PACKAGES:
         if package in missing_packages:
             status = 'not found'
         else:

@@ -86,8 +86,8 @@ def collect(dir_one, dir_two):
     # Create and render tables displaying results
     for source_name, source_data in file_data.items():
         if source_name == 'umccrise':
-            columns = list(umccrise.file_types.keys())
-            columns_display_name = [umccrise.column_name_mapping[n] for n in columns]
+            columns = list(umccrise.FILE_TYPES.keys())
+            columns_display_name = [umccrise.COLUMN_NAME_MAPPING[n] for n in columns]
         elif source_name == 'bcbio':
             raise NotImplemented
         elif source_name == 'dragen':

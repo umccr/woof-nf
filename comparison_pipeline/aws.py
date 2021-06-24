@@ -5,11 +5,11 @@ import sys
 from . import log
 
 
-region = 'ap-southeast-2'
-batch_queue = 'nextflow-job-queue'
-ecr_base_uri = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
-ecr_repo = 'comparison_pipeline'
-ecr_image_tag = '0.0.1'
+REGION = 'ap-southeast-2'
+BATCH_QUEUE = 'nextflow-job-queue'
+ECR_BASE_URI = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
+ECR_REPO = 'comparison_pipeline'
+ECR_IMAGE_TAG = '0.0.1'
 
 
 def check_config():
@@ -29,7 +29,7 @@ def check_config():
     fail_message = 'could not retrieve Batch job queues'
     result = aws_command(command, fail_message)
     job_queues = set(result.stdout.rstrip().split())
-    if batch_queue not in job_queues:
+    if BATCH_QUEUE not in job_queues:
         log.render(log.ftext('\nerror: could not find requested job queue, found:', c='red'))
         for job_queue in job_queues:
             log.render(f'\t{job_queue}')
@@ -44,7 +44,7 @@ def check_config():
     fail_message = 'could not retrieve ECR repositories'
     result = aws_command(command, fail_message)
     ecr_repos = set(result.stdout.rstrip().split())
-    if ecr_repo not in ecr_repos:
+    if ECR_REPO not in ecr_repos:
         log.render(log.ftext('\nerror: could not find requested ECR repository, found:', c='red'))
         for repo in ecr_repos:
             log.render(f'\t{repo}')
@@ -61,7 +61,7 @@ def check_config():
     result = aws_command(command, fail_message)
     tag_lists = [result.stdout.rstrip().split()]
     tags = {tag for tag_list in tag_lists for tag in tag_list}
-    if ecr_image_tag not in tags:
+    if ECR_IMAGE_TAG not in tags:
         log.render(log.ftext('\nerror: could not find requested image tag, found:', c='red'))
         for tag in tags:
             log.render(f'\t{tag}')
@@ -70,7 +70,7 @@ def check_config():
 
 def aws_command(command, fail_message):
     # Remove excessive whitespace/newlines so that we can append --region
-    command_full = f'{command.rstrip()} --region {region}'
+    command_full = f'{command.rstrip()} --region {REGION}'
     result = subprocess.run(
         command_full,
         shell=True,
