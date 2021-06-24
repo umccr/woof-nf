@@ -103,6 +103,7 @@ def collect(dir_one, dir_two):
         log.render(log.ftext('UMCCRISE:', f='bold'))
         log.render(f'  Matched {samples_matched_n} of {samples_all_n} samples:')
         table.render_table(rows)
+        log.render_newline()
     return file_data
 
 

@@ -184,7 +184,6 @@ def check_rpackages(docker):
         rpackage_status_results, missing_errors = get_rpackage_status()
     # Prepare and then render table rows
     rows = prepare_rpackage_status_rows(rpackage_status_results)
-    log.render_newline()
     table.render_table(rows)
     log.render_newline()
     if missing_errors:
