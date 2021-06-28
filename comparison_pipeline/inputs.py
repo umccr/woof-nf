@@ -1,5 +1,6 @@
 import pathlib
 import sys
+from typing import Dict, List, Tuple
 
 
 from . import log
@@ -27,11 +28,13 @@ class FilePair:
 
     def __init__(self, file_one, file_two):
         # Transfer some attributes from InputFile after checking consistency, if needed
+        self.sample_name = None
+        self.filetype = None
         self.transfer_attrs(file_one, file_two)
         self.file_one = file_one
         self.file_two = file_two
 
-    def transfer_attrs(self, file_one, file_two):
+    def transfer_attrs(self, file_one: InputFile, file_two: InputFile) -> None:
         check_fields = ('sample_name', 'filetype', 'inputtype', 'source')
         for field in check_fields:
             # Handle absent files appropriately
@@ -54,7 +57,7 @@ class FilePair:
             setattr(self, field, field_value)
 
     @property
-    def is_matched(self):
+    def is_matched(self) -> bool:
         return isinstance(self.file_one, InputFile) and isinstance(self.file_two, InputFile)
 
     def __repr__(self):
@@ -71,7 +74,7 @@ class SourceFiles:
         self.samples_unmatched = (*samples_unmatched_one, *samples_unmatched_two)
 
 
-def collect(dir_one, dir_two):
+def collect(dir_one: List[pathlib.Path], dir_two: List[pathlib.Path]) -> Dict:
     # Log directories to be searched
     log.task_msg_title('Discovering input files')
     log.render('\nDirectories searched:')
@@ -107,14 +110,14 @@ def collect(dir_one, dir_two):
     return file_data
 
 
-def log_input_directories(dirpaths, n):
+def log_input_directories(dirpaths: List[pathlib.Path], n: str) -> None:
     log.render(f'  Set {n}:')
     for dirpath in dirpaths:
         log.render(f'    {dirpath}')
 
 
-def discover_run_files(dirpaths, run):
-    input_collection = dict()
+def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
+    input_collection: Dict[str, List] = dict()
     for dirpath in dirpaths:
         # Discover files for each input directory
         # NOTE: this will be a branch point for process different input directory types
@@ -136,7 +139,7 @@ def discover_run_files(dirpaths, run):
     return input_collection
 
 
-def match_inputs(inputs_one, inputs_two):
+def match_inputs(inputs_one: Dict, inputs_two: Dict) -> Dict[str, SourceFiles]:
     matched = dict()
     sources = set(inputs_one) | set(inputs_two)
     for source in sources:
@@ -146,16 +149,16 @@ def match_inputs(inputs_one, inputs_two):
     return matched
 
 
-def perform_matching(inputs_one, inputs_two):
+def perform_matching(inputs_one: Dict, inputs_two: Dict) -> SourceFiles:
     # Group files by sample name and input type
-    file_groups = dict()
+    file_groups: Dict[Tuple[str, str], List] = dict()
     for f in (*inputs_one, *inputs_two):
         key = (f.sample_name, f.filetype)
         if key not in file_groups:
             file_groups[key] = list()
         file_groups[key].append(f)
     # Check grouped files match
-    sample_files = dict()
+    sample_files: Dict[str, Dict[str, FilePair]] = dict()
     for file_group in file_groups.values():
         # Set file from run one and run two
         assert len(file_group) <= 2
@@ -177,7 +180,7 @@ def perform_matching(inputs_one, inputs_two):
     return SourceFiles(sample_files, samples_matched, samples_unmatched_one, samples_unmatched_two)
 
 
-def determine_match_status(sample_files):
+def determine_match_status(sample_files: Dict) -> Tuple:
     samples_matched = set()
     samples_unmatched_one = set()
     samples_unmatched_two = set()
@@ -202,7 +205,7 @@ def determine_match_status(sample_files):
     return samples_matched, samples_unmatched_one, samples_unmatched_two
 
 
-def prepare_rows(source_data, columns, file_columns_display):
+def prepare_rows(source_data: SourceFiles, columns: List, file_columns_display: List) -> List[table.Row]:
     # Define symbols
     tick_green = table.Cell('✓', just='c', c='green')
     tick_grey = table.Cell('✓', just='c', c='black')
@@ -262,7 +265,7 @@ def prepare_rows(source_data, columns, file_columns_display):
     return rows
 
 
-def write(input_data, output_fp):
+def write(input_data: Dict, output_fp: pathlib.Path) -> pathlib.Path:
     # NOTE: only umccrise currently implemented
     sources_unimpl = {'umccrise'} ^ set(input_data)
     if sources_unimpl:

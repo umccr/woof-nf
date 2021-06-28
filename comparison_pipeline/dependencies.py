@@ -4,13 +4,14 @@ import shutil
 import subprocess
 import sys
 import textwrap
+from typing import List, Dict, Tuple
 
 
 from . import log
 from . import table
 
 
-SOFTWARE_DEPENDENCIES = {
+SOFTWARE_DEPENDENCIES: Dict[str, Dict] = {
     'aws': {
         'min': '2.0.0',
         'max': None,
@@ -66,7 +67,7 @@ R_PACKAGES = (
 )
 
 
-def check(executor, docker):
+def check(executor: str, docker: bool) -> None:
     # Check software tools and then R packages. Logic to determine presence of R packages
     # considerably different and so is separated
     # When docker is set to be used, only check for dependencies required to launch tasks
@@ -75,7 +76,7 @@ def check(executor, docker):
     check_rpackages(docker)
 
 
-def check_tools(executor, docker):
+def check_tools(executor: str, docker: bool) -> None:
     log.render('\nTool status:')
     tool_status_results = list()
     for tool in SOFTWARE_DEPENDENCIES:
@@ -101,7 +102,7 @@ def check_tools(executor, docker):
         print_missing_error(missing_errors)
 
 
-def get_tool_status(tool):
+def get_tool_status(tool: str) -> Tuple[str, str, str]:
     version_arg = SOFTWARE_DEPENDENCIES[tool]['arg']
     version_regex = SOFTWARE_DEPENDENCIES[tool]['regex']
     min_version = SOFTWARE_DEPENDENCIES[tool]['min']
@@ -123,7 +124,10 @@ def get_tool_status(tool):
         log.render(f'error: got bad return code for {command}')
         sys.exit(1)
     regex_result = re.search(version_regex, process_result.stdout, re.MULTILINE)
-    version = regex_result.group(1)
+    if regex_result:
+        version = regex_result.group(1)
+    else:
+        assert False
     # Check tool version
     if min_version and distutils.version.LooseVersion(version) < min_version:
         status = 'too old'
@@ -134,7 +138,7 @@ def get_tool_status(tool):
     return tool, version, status
 
 
-def prepare_tool_status_rows(tool_status_results):
+def prepare_tool_status_rows(tool_status_results: List) -> Tuple:
     rows = list()
     missing_errors = list()
     # Header
@@ -173,7 +177,7 @@ def prepare_tool_status_rows(tool_status_results):
     return rows, missing_errors
 
 
-def check_rpackages(docker):
+def check_rpackages(docker: bool) -> None:
     log.render('R package status:')
     if docker:
         missing_errors = None
@@ -190,7 +194,7 @@ def check_rpackages(docker):
         print_missing_error(missing_errors)
 
 
-def get_rpackage_status():
+def get_rpackage_status() -> Tuple:
     packages_str = 'NULL'
     for package in R_PACKAGES:
         packages_str += f", '{package}'"
@@ -225,7 +229,7 @@ def get_rpackage_status():
     return package_status, missing_packages
 
 
-def prepare_rpackage_status_rows(rpackage_status_results):
+def prepare_rpackage_status_rows(rpackage_status_results: List) -> List[table.Row]:
     rows = list()
     # Header
     header_row = table.Row(('R package', 'Status'), header=True)
@@ -247,7 +251,7 @@ def prepare_rpackage_status_rows(rpackage_status_results):
     return rows
 
 
-def print_missing_error(missing_errors):
+def print_missing_error(missing_errors: List[str]) -> None:
     if len(missing_errors) == 1:
         [msg] = missing_errors
         log.render(f'\nError: {msg} is required')

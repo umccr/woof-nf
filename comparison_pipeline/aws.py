@@ -12,7 +12,7 @@ ECR_REPO = 'comparison_pipeline'
 ECR_IMAGE_TAG = '0.0.1'
 
 
-def check_config():
+def check_config() -> None:
     log.task_msg_title('Checking AWS credentials and config')
     log.render_newline()
     # Authentication
@@ -68,7 +68,7 @@ def check_config():
         sys.exit(1)
 
 
-def aws_command(command, fail_message):
+def aws_command(command: str, fail_message: str) -> subprocess.CompletedProcess:
     # Remove excessive whitespace/newlines so that we can append --region
     command_full = f'{command.rstrip()} --region {REGION}'
     result = subprocess.run(

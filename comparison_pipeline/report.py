@@ -7,7 +7,7 @@ import textwrap
 from . import log
 
 
-def render(output_dir):
+def render(output_dir: pathlib.Path) -> None:
     log.task_msg_title('Rendering RMarkdown report')
     log.render_newline()
     output_fp = output_dir / 'report.html'

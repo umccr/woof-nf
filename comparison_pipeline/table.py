@@ -1,3 +1,6 @@
+from typing import List
+
+
 from . import log
 
 
@@ -30,12 +33,12 @@ class Row:
         self.inset = inset
 
 
-def set_row_colour(row, colour):
+def set_row_colour(row: Row, colour: str) -> None:
     for cell in row.cells:
         cell.c = colour
 
 
-def set_column_sizes(rows):
+def set_column_sizes(rows: List[Row]) -> None:
     for column_cells in zip(*[row.cells for row in rows]):
         clargest = max(len(log.ANSI_ESCAPE.sub('', c.text)) for c in column_cells)
         # Set to be at least n character in length
@@ -44,7 +47,7 @@ def set_column_sizes(rows):
             cell.csize = max(12, clargest + (4 - clargest % 4))
 
 
-def render_row(row):
+def render_row(row: Row) -> List[str]:
     texts = list()
     for cell in row.cells:
         # Text justification
@@ -62,8 +65,8 @@ def render_row(row):
     return texts
 
 
-def render_table(rows):
-    csizes = set_column_sizes(rows)
+def render_table(rows: List[Row]) -> None:
+    set_column_sizes(rows)
     for row in rows:
         texts = render_row(row)
         log.render(row.inset + ''.join(texts))

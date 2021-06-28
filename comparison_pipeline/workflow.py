@@ -1,9 +1,11 @@
 import math
 import pathlib
 import re
+import os
 import shutil
 import subprocess
 import sys
+from typing import Dict, List, Optional
 
 
 from . import aws
@@ -24,7 +26,7 @@ aws_completion = [
 ]
 
 
-def create_configuration(inputs_fp, output_dir, docker, executor):
+def create_configuration(inputs_fp: pathlib.Path, output_dir: pathlib.Path, docker: bool, executor: str) -> pathlib.Path:
     # Get configuration
     config_lines = list()
     config_lines.append('// Inputs and outputs')
@@ -50,7 +52,7 @@ def create_configuration(inputs_fp, output_dir, docker, executor):
     return output_fp
 
 
-def run(inputs_fp, output_dir, resume, docker, executor, bucket):
+def run(inputs_fp: pathlib.Path, output_dir: pathlib.Path, resume: bool, docker: bool, executor: str, bucket: str) -> None:
     # Set workflow configuration
     config_fp = create_configuration(inputs_fp, output_dir, docker, executor)
     # Set command line arguments
@@ -89,14 +91,14 @@ def run(inputs_fp, output_dir, resume, docker, executor, bucket):
         sys.exit(1)
 
 
-def render_nextflow_lines(p):
+def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
     # Line store
     title = str()
     executor = str()
     processes = dict()
     errors = list()
     # Line size and display count
-    line_sizes = list()
+    line_sizes: List[int] = list()
     lines_displayed = 0
     # AWS file staging
     files_uploading = list()
@@ -104,6 +106,9 @@ def render_nextflow_lines(p):
     newline_previous = False
     splash = True
     # Process lines
+    # NOTE: type checking requires p.stdout not to be None
+    if not p.stdout:
+        assert False
     for line in p.stdout:
         # If allow re-rendering if current line and last are not newlines
         if line != '\n' and newline_previous:
@@ -167,7 +172,7 @@ def render_nextflow_lines(p):
     return errors
 
 
-def get_actual_lines(line_sizes, term_size):
+def get_actual_lines(line_sizes: List[int], term_size: os.terminal_size) -> List[int]:
     lines_actual = list()
     for line_size in line_sizes:
         lines = math.ceil(line_size / term_size.columns)
@@ -175,7 +180,7 @@ def get_actual_lines(line_sizes, term_size):
     return lines_actual
 
 
-def clear_terminal(term_size, lines_displayed):
+def clear_terminal(term_size: os.terminal_size, lines_displayed: int) -> None:
     # Set cursor to first rewrite line then clear to end of terminal
     lines_rewrite = min(term_size.lines, lines_displayed)
     if lines_displayed:
@@ -183,34 +188,42 @@ def clear_terminal(term_size, lines_displayed):
         sys.stdout.write('\u001b[0J')
 
 
-def render_output(title, executor, processes, files_uploading, errors, lines_displayed, term_size):
+def render_output(
+    title: str,
+    executor: str,
+    processes: Dict[str, str],
+    files_uploading: List[str],
+    errors: List[str],
+    lines_displayed: int,
+    term_size: os.terminal_size
+) -> List[int]:
     # Clear terminal
     clear_terminal(term_size, lines_displayed)
     # Prepare new lines
-    lines = list()
-    lines.append(title)
-    lines.append(executor)
-    lines.extend(processes.values())
+    lines_all: List[str] = list()
+    lines_all.append(title)
+    lines_all.append(executor)
+    lines_all.extend(processes.values())
     if files_uploading:
-        lines.append('\n')
+        lines_all.append('\n')
         files_n = len(files_uploading)
         plurality = 'file' if files_n == 1 else 'files'
-        lines.append(f'Currently uploading {len(files_uploading)} {plurality} to S3\n')
-    lines.append('\n')
+        lines_all.append(f'Currently uploading {len(files_uploading)} {plurality} to S3\n')
+    lines_all.append('\n')
     if errors:
-        lines.append(
+        lines_all.append(
             'Errors encountered - check .nextflow.log for further information!'
             ' Further details will be printed at conclusion of workflow run.\n'
         )
-        lines.append('\n')
+        lines_all.append('\n')
     # Remove empty lines
-    lines = [line for line in lines if line]
+    lines: List[str] = [line for line in lines_all if line]
     # Set max display lines, get actual number of lines that will be displayed while accounting for line wrapping
     lines_print_max = term_size.lines - 1
     line_sizes = [len(l) - 1 for l in lines]
     lines_actual = get_actual_lines(line_sizes, term_size)
     # Select lines to display such that we don't exceed number of available lines
-    line_index = None
+    line_index: Optional[int] = None
     lines_actual_sum = 0
     for i, la in enumerate(lines_actual[::-1], 1):
         lines_actual_sum += la
@@ -219,19 +232,19 @@ def render_output(title, executor, processes, files_uploading, errors, lines_dis
         line_index = i
     # If the terminal is too small to display normal messages, indicate. Otherwise display nf
     # output
-    if line_index == None:
-        message = 'Terminal size too small to print message\n'
-        sys.stdout.write(message)
-        line_sizes = [len(message) - 1]
-    else:
+    if line_index:
         lines = lines[-line_index:]
         line_sizes = line_sizes[-line_index:]
         for line in lines:
             sys.stdout.write(line)
+    else:
+        message = 'Terminal size too small to print message\n'
+        sys.stdout.write(message)
+        line_sizes = [len(message) - 1]
     return line_sizes
 
 
-def print_line(line, line_sizes):
+def print_line(line, line_sizes) -> None:
     sys.stdout.write(line)
     line_size = max(1, len(line) - 1)
     line_sizes.append(line_size)

@@ -1,5 +1,6 @@
 import glob
 import pathlib
+from typing import List
 
 
 from . import inputs
@@ -30,7 +31,7 @@ COLUMN_NAME_MAPPING = {
 }
 
 
-def process_input_directory(dirpath, run):
+def process_input_directory(dirpath: pathlib.Path, run: str) -> List:
     directory_inputs = list()
     for input_name, (subdir, suffix) in INPUTS_LIST.items():
         # Construct full glob expression, iterate matches

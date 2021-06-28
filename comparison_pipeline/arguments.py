@@ -7,7 +7,7 @@ import sys
 from . import log
 
 
-def collect():
+def collect() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--run_dir_one',
@@ -57,7 +57,7 @@ def collect():
     return parser.parse_args()
 
 
-def check_and_process(args):
+def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     log.task_msg_title('Checking arguments')
     log.task_msg_body('Not yet fully implemented - hold on to your seats!\n')
 
