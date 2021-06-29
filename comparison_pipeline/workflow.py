@@ -78,15 +78,14 @@ def run(inputs_fp: pathlib.Path, output_dir: pathlib.Path, resume: bool, docker:
         shell=True,
         universal_newlines=True,
     )
-    # Stream output to terminal, replicating behaviour
+    # Stream output to terminal, replicating NF console logging
     errors = render_nextflow_lines(p)
     # Block until pipeline process exits
     p.wait()
-    # Print errors
+    # Print errors and propagate erroneous return code
     if errors:
         error_str = ''.join(errors)
         log.render(error_str)
-    # Propagate erroneous return code
     if p.returncode != 0:
         sys.exit(1)
 
@@ -110,7 +109,7 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
     if not p.stdout:
         assert False
     for line in p.stdout:
-        # If allow re-rendering if current line and last are not newlines
+        # Allow re-rendering if current line and last are not newlines
         if line != '\n' and newline_previous:
             newline_previous = False
         # Begin main line handling
@@ -156,8 +155,8 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
             # Clear files uploading and set previous newline variable
             files_uploading = list()
             newline_previous = True
-        # Disable splash if we have both title and executor
-        splash = not (title and executor)
+            # Disable splash if we have both title and executor
+            splash = not (title and executor)
     # Clear output so we can print full and final text
     term_size = shutil.get_terminal_size()
     clear_terminal(term_size, lines_displayed)

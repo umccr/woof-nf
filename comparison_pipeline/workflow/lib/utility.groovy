@@ -1,7 +1,7 @@
 import java.nio.file.Paths
 
 def process_inputs(input_files) {
-  // Collate input files, include only if comparison is possible otherwise warn
+  // Collate input files
   inputs_cnv = []
   inputs_smlv = []
   inputs_sv = []

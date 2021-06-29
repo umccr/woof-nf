@@ -59,7 +59,7 @@ d.cnv_data_diff <- purrr::map(v.sample_dirs, function(s.base_dir) {
 # Subset data for display
 #  1. group by sample name
 #  2. order by size of min/max difference
-#  3. select to entries
+#  3. select up to n entries
 d.cnv_data_diff_subset <- d.cnv_data_diff %>%
   dplyr::group_by(`Sample name`) %>%
   dplyr::arrange(-(`Max diff` + `Max diff`)) %>%

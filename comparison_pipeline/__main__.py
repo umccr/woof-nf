@@ -14,12 +14,9 @@ from . import workflow
 
 
 def entry():
-    # TODO: splash
-
     # Print entry
-    # TODO: further description of what will be done
     log.task_msg_title('Starting comparison pipeline')
-    log.task_msg_body('Welcome to the UMCCR comparison pipeline\n')
+    log.task_msg_body('Welcome to the UMCCR variant comparison pipeline\n')
 
     # Get and check command line arguments
     args = arguments.collect()
@@ -41,7 +38,7 @@ def entry():
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
     inputs_fp = inputs.write(input_data, args.output_dir / 'input_files.tsv')
 
-    # Execute pipeline
+    # Execute pipeline and render report
     workflow.run(
         inputs_fp,
         args.output_dir,
@@ -50,8 +47,6 @@ def entry():
         args.executor,
         args.s3_bucket
     )
-
-    # Render report
     report.render(args.output_dir)
 
     # Exit message

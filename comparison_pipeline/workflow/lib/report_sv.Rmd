@@ -39,6 +39,10 @@ v.sv_fpfn_table_columns_comma <- c(
 
 ## Summary
 ```{r sv_summary_data}
+# Prepare SV summary data
+# 1. read in SV data from files and bind rows
+# 2. select, order, and rename columns
+# 3. format some numeric columns with commas
 d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   s.sv_metrics_fp <- paste0(s.base_dir, '/structural_variants/eval_metrics.tsv')
   if (! fs::file_exists(s.sv_metrics_fp)) {
@@ -71,6 +75,10 @@ d.sv_summary_data %>%
 
 ## Call error counts
 ```{r sv_fpfn_data}
+# Prepare SV call error type data
+# 1. read in data and bind all rows together
+# 2. select, order, and rename columns
+# 3. format some numeric columns with commas
 d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   s.sv_fpfn_fp <- paste0(s.base_dir, '/structural_variants/fpfn.tsv')
   if (! fs::file_exists(s.sv_fpfn_fp)) {
@@ -114,9 +122,13 @@ d.sv_fpfn_data %>%
 
 ## SV circos {.tabset .tabset-pills}
 ```{r results='asis', sv_circos}
+# Prepare circos info data
+# 1. locate circos plot on fs
+# 2. create tibble with sample name and circos plot filepath
+# 3. bind rows, join with SV summary data
 d.sv_circos_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   sample_name <- basename(s.base_dir)
-  s.circos_fp <- suppressWarnings(fs::dir_ls(paste0(s.base_dir, '/structural_variants/circos/'), glob='*/circos_*png', fail=FALSE)) 
+  s.circos_fp <- suppressWarnings(fs::dir_ls(paste0(s.base_dir, '/structural_variants/circos/'), glob='*/circos_*png', fail=FALSE))
   if (length(s.circos_fp)==0) {
     return(NULL)
   }
@@ -132,6 +144,6 @@ for (i in 1:nrow(d.sv_circos_data)) {
   cat('\n### ', paste(d.sv_circos_data$`Sample name`[i], '\n'))
   cat(glue::glue('<img src="{d.sv_circos_data$png_filepath[i]}" alt="{d.sv_circos_data$`Sample name`[i]}" width="30%">'), '\n')
   cat('\n***\n')
-  
+
 }
 ```

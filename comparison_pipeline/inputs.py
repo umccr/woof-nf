@@ -27,12 +27,12 @@ class InputFile:
 class FilePair:
 
     def __init__(self, file_one, file_two):
+        self.file_one = file_one
+        self.file_two = file_two
         # Transfer some attributes from InputFile after checking consistency, if needed
         self.sample_name = None
         self.filetype = None
         self.transfer_attrs(file_one, file_two)
-        self.file_one = file_one
-        self.file_two = file_two
 
     def transfer_attrs(self, file_one: InputFile, file_two: InputFile) -> None:
         check_fields = ('sample_name', 'filetype', 'inputtype', 'source')

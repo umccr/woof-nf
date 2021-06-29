@@ -17,20 +17,20 @@ workflow workflow_small_variants {
     // Format (ch_smlv_pass): [sample_name, vcf_type, flags, vcf]
     ch_smlv_pass = module_smlv_pass(ch_smlv.map { it[0..3] })
 
-    // Select input vcfs that have no index and add newly created vcfs for indexing
+    // Select input VCFs that have no index and add newly created VCFs for indexing
     // Format (ch_vcfs_no_index): [sample_name, vcf_type, flags, vcf]
     ch_smlv_no_index = ch_smlv
       .filter { ! (it[2] & FlagBits.INDEXED) }
       .map { it[0..3] }
       .mix(ch_smlv_pass)
 
-    // Index vcfs and join with vcfs that already have an index
+    // Index VCFs and join with those already indexed
     // Format (ch_vcfs_indexed_all): [sample_name, vcf_type, flags, vcf, vcf_index]
     ch_smlv_indexed = module_index_vcf(ch_smlv_no_index)
     ch_smlv_indexed_all = ch_smlv_indexed
       .mix(ch_smlv.filter { it[2] & FlagBits.INDEXED })
 
-    // Prepare/group/format VCF channel and then observe differences between VCFs
+    // Prepare/group/format VCF channel and then determine differences between VCFs
     // Format (ch_smlv_prepared): [sample_name, vcf_type, flags, vcf_one, index_one, vcf_two, index_two]
     ch_smlv_prepared = prepare_smlv_channel(ch_smlv_indexed_all)
     // Format (ch_smlv_intersects): [sample_name, vcf_type, flags, [0000.vcf, 0001.vcf, 0002.vcf]]

@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-// Silently enable DSL2
 nextflow.enable.dsl = 2
 
 // Import workflows
@@ -28,7 +27,6 @@ input_files = inputs_fp
 (ch_cnv, ch_smlv, ch_sv) = process_inputs(input_files)
 
 workflow {
-  // Run comparisons
   workflow_copy_number_variants(ch_cnv)
   workflow_small_variants(ch_smlv)
   workflow_structural_variants(ch_sv)
