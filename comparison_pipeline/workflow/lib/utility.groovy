@@ -79,6 +79,11 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
     .groupTuple(by: [0, 1])
     .map { sample_name, vcf_type, flags, vcfs, vcf_indices ->
       // Get index of first and second file
+      // NOTE: it is *critical* that the `def` keyword is used to declare variables here. For some
+      // reason that isn't clear to me when a function is called twice and executes near-simulatenously
+      // in NF and involves calling `.map` on a channel, variables leak between `.map` iterations.
+      def index_one = null
+      def index_two = null
       (index_one, index_two) = get_file_order(flags)
       // Check flags are consistent
       check_flag_consistency(flags)
@@ -100,6 +105,8 @@ def pair_files(ch_files) {
     .groupTuple()
     .map { sample_name, input_types, flags, files ->
       // Get index of first and second file
+      def index_one = null
+      def index_two = null
       (index_one, index_two) = get_file_order(flags)
       // Check data is consistent
       check_flag_consistency(flags)
