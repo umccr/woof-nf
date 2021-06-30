@@ -84,12 +84,7 @@ d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
   if (! fs::file_exists(s.sv_fpfn_fp)) {
     return(NULL)
   }
-  d <- readr::read_tsv(s.sv_fpfn_fp, col_types='ccccicic')
-  if (nrow(d)==0) {
-    return(NULL)
-  } else {
-    return(d)
-  }
+  readr::read_tsv(s.sv_fpfn_fp, col_types='ccccicic')
 }) %>%
   dplyr::bind_rows() %>%
   dplyr::select(dplyr::all_of(v.sv_fpfn_table_columns)) %>%
