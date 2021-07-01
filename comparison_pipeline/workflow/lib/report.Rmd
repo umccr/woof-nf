@@ -23,6 +23,15 @@ knitr::opts_chunk$set(
 .main-container {
   max-width: 1400px;
 }
+
+details {
+  padding-bottom: 20px;
+}
+
+.details-container {
+  margin-top: 25px;
+  margin-left: 50px;
+}
 ```
 
 ```{r libraries}
