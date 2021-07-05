@@ -49,7 +49,7 @@ SOFTWARE_DEPENDENCIES: Dict[str, Dict] = {
         'regex': '^.+version ([0-9.]+) build',
     },
     'R': {
-        'min': '4.0.0',
+        'min': '3.5',
         'max': None,
         'arg': '--version',
         'regex': '^R version ([0-9.]+)',
@@ -62,8 +62,11 @@ R_PACKAGES = (
     'bedr',
     'DT',
     'glue',
+    'kableextra',
     'rock',
     'tidyverse',
+    # Required for external data
+    'woofr',
 )
 
 
