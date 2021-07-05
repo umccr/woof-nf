@@ -11,8 +11,7 @@ from . import umccrise
 class InputFile:
 
     def __init__(self, sample_name, run, filepath, filetype, inputtype, source):
-        # TODO: remove version clipping - dev only
-        self.sample_name = sample_name.split('__')[1]
+        self.sample_name = sample_name
         self.run = run
         self.filepath = filepath
         self.filetype = filetype
