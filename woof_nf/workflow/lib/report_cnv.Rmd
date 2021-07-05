@@ -1,4 +1,4 @@
-# Copy number variants
+# Copy number variants {.tabset .tabset-fade}
 ## Summary
 ```{r cnv_summary_data}
 s.umcccr_genes_fp <- system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr')

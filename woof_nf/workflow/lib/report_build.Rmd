@@ -1,4 +1,4 @@
-# Build information
+# Build information {.tabset .tabset-fade}
 ## Report configuration
 ```{r configuration}
 n.table_height <- min(38.75 * (1 + length(v.sample_dirs)) + 21, 600)

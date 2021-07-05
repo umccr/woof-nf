@@ -1,4 +1,4 @@
-# Structural variants
+# Structural variants {.tabset .tabset-fade}
 ```{r sv_constants}
 v.sv_summary_table_columns <- c(
   'Sample name'='sample',
@@ -73,7 +73,7 @@ d.sv_summary_data %>%
   )
 ```
 
-## Call error counts
+## Call errors
 ```{r sv_fpfn_data}
 # Prepare SV call error type data
 # 1. read in data and bind all rows together

@@ -1,4 +1,4 @@
-# Small variants
+# Small variants {.tabset .tabset-fade}
 ## Summary
 ```{r smlv_summary_constants}
 # Small variant summary table columns
@@ -107,7 +107,7 @@ d.smlv_summary_data %>%
   )
 ```
 
-## PCGR tables
+## PCGR
 ```{r smlv_pcgr_constants}
 # Small variant PCGR table columns
 # Order and display name
