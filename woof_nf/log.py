@@ -61,6 +61,11 @@ def ftext(text: str, c: str = None, f: Optional[Union[List[str], str]] = None) -
         ftext = CYAN + ftext
     elif c == 'white':
         ftext = WHITE + ftext
+    elif c in {None, ''}:
+        # Allow c to be none or an empty str
+        pass
+    else:
+        assert False
     # Typeface
     if isinstance(f, list):
         f_list = f
