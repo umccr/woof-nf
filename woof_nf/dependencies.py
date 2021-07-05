@@ -115,7 +115,7 @@ def get_tool_status(tool: str) -> Tuple[str, str, str]:
     if tool_path == None:
         return tool, '-', 'not found'
     # Run command to get version
-    command = f'{tool} {version_arg}',
+    command = f'{tool} {version_arg}'
     process_result = subprocess.run(
         command,
         stdout=subprocess.PIPE,
@@ -124,13 +124,22 @@ def get_tool_status(tool: str) -> Tuple[str, str, str]:
         encoding='utf-8'
     )
     if process_result.returncode != 0:
-        log.render(f'error: got bad return code for {command}')
+        log.render(log.ftext(f'error: got bad return code for {command}', c='red'))
+        log.render(log.ftext(f'\ncommand used:', f='bold'))
+        log.render(command)
+        log.render(log.ftext(f'\nresult:', f='bold'))
+        log.render(process_result.stdout)
         sys.exit(1)
     regex_result = re.search(version_regex, process_result.stdout, re.MULTILINE)
     if regex_result:
         version = regex_result.group(1)
     else:
-        assert False
+        log.render(log.ftext(f'\nerror: failed to get software version for {tool}', c='red'))
+        log.render(log.ftext(f'\ncommand used:', f='bold'))
+        log.render(command)
+        log.render(log.ftext(f'\nresult:', f='bold'))
+        log.render(process_result.stdout)
+        sys.exit(1)
     # Check tool version
     if min_version and distutils.version.LooseVersion(version) < min_version:
         status = 'too old'
