@@ -8,7 +8,7 @@ from . import log
 REGION = 'ap-southeast-2'
 BATCH_QUEUE = 'nextflow-job-queue'
 ECR_BASE_URI = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
-ECR_REPO = 'comparison_pipeline'
+ECR_REPO = 'woof-nf'
 ECR_IMAGE_TAG = '0.0.1'
 
 
@@ -50,9 +50,9 @@ def check_config() -> None:
             log.render(f'\t{repo}')
         sys.exit(1)
     # ECR image tag
-    command = r'''
+    command = fr'''
         aws ecr describe-images \
-            --repository-name comparison_pipeline \
+            --repository-name {ECR_REPO} \
             --output text \
             --no-paginate \
             --query 'imageDetails[].imageTags'

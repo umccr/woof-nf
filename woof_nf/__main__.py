@@ -15,7 +15,7 @@ from . import workflow
 
 def entry():
     # Print entry
-    log.task_msg_title('Starting comparison pipeline')
+    log.task_msg_title('Starting the woof-nf pipeline')
     log.task_msg_body('Welcome to the UMCCR variant comparison pipeline\n')
 
     # Get and check command line arguments
