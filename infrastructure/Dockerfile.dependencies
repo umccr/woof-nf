@@ -2,7 +2,7 @@
 FROM ubuntu:20.04
 
 # Set conda environment name
-ARG ENV_NAME=cmpwf
+ARG ENV_NAME=woof-nf
 
 # Enable non-interactive tzdata install and config
 ARG DEBIAN_FRONTEND='noninteractive'
