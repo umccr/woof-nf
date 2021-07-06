@@ -19,7 +19,7 @@ PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
 BIN_UPLOAD_LINE_RE = re.compile(r'^Uploading local `bin` scripts.+$')
 
-aws_completion = [
+AWS_COMPLETION = [
     'Completed at:',
     'Duration    :',
     'CPU hours   :',
@@ -133,7 +133,7 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
         elif bin_upload_match := BIN_UPLOAD_LINE_RE.match(line):
             # Not considered important
             pass
-        elif any(line.startswith(p) for p in aws_completion):
+        elif any(line.startswith(p) for p in AWS_COMPLETION):
             # Not considered important - completion status, only present with AWS
             pass
         elif line == '\n':
