@@ -12,7 +12,8 @@ from . import aws
 from . import log
 
 
-DOCKER_URI = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
+DOCKER_URI_AWS = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
+DOCKER_URI_HUB = f'docker.io/scwatts/woof-nf:0.0.1'
 
 PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
@@ -43,8 +44,14 @@ def create_configuration(inputs_fp: pathlib.Path, output_dir: pathlib.Path, dock
     else:
         assert False
     if docker:
+        if executor == 'aws':
+            docker_uri = DOCKER_URI_AWS
+        elif executor == 'local':
+            docker_uri = DOCKER_URI_HUB
+        else:
+            assert False
         config_lines.append('docker.enabled = true')
-        config_lines.append(f'process.container = "{DOCKER_URI}"')
+        config_lines.append(f'process.container = "{docker_uri}"')
     # Write to disk
     output_fp = output_dir / 'nextflow.config'
     with output_fp.open('w') as fh:
