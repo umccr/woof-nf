@@ -62,7 +62,7 @@ R_PACKAGES = (
     'bedr',
     'DT',
     'glue',
-    'kableextra',
+    'kableExtra',
     'rock',
     'tidyverse',
     # Required for external data
