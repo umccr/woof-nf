@@ -7,8 +7,6 @@ process module_smlv_count {
 
   script:
   source = attributes.filtered ? 'filtered' : 'input'
-  uuid = UUID.randomUUID().toString()
-  filename = "${uuid}.tsv"
   """
   # Check for gzip magic bits
   magic_bits=\$(hexdump -n2 -e '2/1 "%02x" "\n"' ${vcf})
@@ -23,6 +21,7 @@ process module_smlv_count {
   else
     run_value="${attributes.position}"
   fi
-  echo -e "${attributes.file_source}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "${filename}"
+  filename=\$(md5sum < ${vcf} | cut -f1 -d' ')
+  echo -e "${attributes.file_source}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "\${filename}.tsv"
   """
 }
