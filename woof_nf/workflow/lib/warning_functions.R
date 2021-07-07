@@ -22,7 +22,7 @@ render_warning_files <- function(d.missing_files) {
 render_warning_variants <- function(d.display_data) {
   s.summary_text_templ <- '
   <summary>
-    <span style="color: #e9c46a;">Not displaying <b>${n.variants_undisplayed}</b> undisplayed ${s.plurality}</span>
+    <span style="color: #e9c46a;">Not displaying <b>${n.variants_undisplayed}</b> ${s.plurality}</span>
     <span style="color: #b0b0b0;">(click for details)</span>
   </summary>
   '

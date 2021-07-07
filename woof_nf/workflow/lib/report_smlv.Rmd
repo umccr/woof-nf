@@ -76,12 +76,12 @@ discover_smlv_files <- function(s.base_dir) {
     )
   })
   d.file_info_comparisons <- dplyr::bind_rows(v.file_info_comparisons)
-  # Combine, set render info, and return
+  # Combine, set whether count info is available, and return
   d.files <- dplyr::bind_rows(
     d.file_info_counts,
     d.file_info_comparisons
   )
-  d.files$render <- d.files$exists[d.files$file_type=='count'] && any(d.files$exists[d.files$file_type %in% v.comparison_file_types])
+  d.files$has_counts <- d.files$exists[d.files$file_type=='count'] && any(d.files$exists[d.files$file_type %in% v.comparison_file_types])
   return(d.files)
 }
 
@@ -109,7 +109,7 @@ get_smlv_summary_data <- function(d.files) {
   v.comparison_files <- d.comparison_files_all$file[d.comparison_files_all$exists]
   d.smlv_table <- purrr::map(v.comparison_files, readr::read_tsv, col_types=readr::cols()) %>%
     dplyr::bind_rows() %>%
-    dplyr::full_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
+    dplyr::left_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
     dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_round), function(v.col) { format(round(v.col, 4), nsmall=4) })) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_comma), scales::comma))
@@ -137,13 +137,12 @@ render_smlv_summary_table <- function(d.smlv_summary_data) {
 
 ```{r smlv_summary_process}
 # NOTE: we should consider whether we need to subset variants for display
-
-# Read in files and process
+# NOTE: may be possible to generalise cleanly without too much work
 v.smlv_files <- purrr::map(v.sample_dirs, discover_smlv_files)
-v.smlv_files_render <- v.smlv_files[sapply(v.smlv_files, function(d) { any(d$render) })]
+v.smlv_files_with_counts <- v.smlv_files[sapply(v.smlv_files, function(d) { any(d$has_counts) })]
 # Process data or create empty tibble
-if (length(v.smlv_files_render) > 0) {
-  # Finalise small variant data
+if (length(v.smlv_files_with_counts) > 0) {
+  # Get and finalise small variant data
   # 1. bind rows into single table
   # 2. sort rows by subset
   d.smlv_summary_data <- purrr::map(v.smlv_files, get_smlv_summary_data) %>%
@@ -166,7 +165,7 @@ l.smlv_files_missing <- nrow(d.smlv_files_missing) > 0
 render_warning_files(d.smlv_files_missing)
 ```
 
-```{r smlv_summary_render_table}
+```{r smlv_summary_table}
 # Render
 render_smlv_summary_table(d.smlv_summary_data)
 ```
@@ -300,32 +299,32 @@ smlv_pcgr_render_table <- function(d.smlv_pcgr_data_subset) {
 ```
 
 ```{r smlv_pcgr_process}
-# Read in files and process
 v.smlv_pcgr_files <- purrr::map(v.sample_dirs, discover_smlv_pcgr_files) %>%
   purrr::flatten()
 v.smlv_pcgr_files_exist <- v.smlv_pcgr_files[sapply(v.smlv_pcgr_files, function(d) { d$exists })]
 # Process data or create empty tibble
 if (length(v.smlv_pcgr_files_exist) > 0) {
-  # Finalise PCGR data
+  # Get and finalise PCGR data
   # 1. bind rows into single table
   # 2. format position column with comma
   d.smlv_pcgr_data <- purrr::map(v.smlv_pcgr_files_exist, get_smlv_pcgr_data) %>%
     dplyr::bind_rows() %>%
     dplyr::mutate(Position=scales::comma(Position, accuracy=1))
+  # Subset top n, ordering by supposed priority
+  #   1. group by sample and then order by PCGR tier
+  #   2. select top n entries
+  d.smlv_pcgr_data_subset <- d.smlv_pcgr_data %>%
+    dplyr::group_by(`Sample name`) %>%
+    dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`)) %>%
+    dplyr::slice(1:10)
 } else {
-  d.smlv_pcgr_data <- dplyr::bind_rows(v.smlv_vcf_columns)[NULL, ]
+  d.smlv_pcgr_data <- d.smlv_pcgr_data_subset <- dplyr::bind_rows(v.smlv_vcf_columns)[NULL, ]
 }
 
-# Subset top n, ordering by supposed priority
-#   1. group by sample and then order by PCGR tier
-#   2. select top n entries
-d.smlv_pcgr_data_subset <- d.smlv_pcgr_data %>%
-  dplyr::group_by(`Sample name`) %>%
-  dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`)) %>%
-  dplyr::slice(1:10)
 ```
 
 ```{r smlv_pcgr_warnings}
+# NOTE: this pattern and the one below could probably be generalised as a fn
 # Missing file warning
 d.smlv_pcgr_files <- dplyr::bind_rows(v.smlv_pcgr_files)
 d.smlv_pcgr_files_missing <- d.smlv_pcgr_files[! d.smlv_pcgr_files$exists, ]
@@ -341,6 +340,14 @@ if (nrow(d.smlv_pcgr_data_subset) > 0) {
 }
 ```
 
+```{r smlv_pcgr_variants_warning_files, eval=l.smlv_pcgr_files_missing, results='asis'}
+render_warning_files(d.smlv_pcgr_files_missing)
+```
+
+```{r smlv_pcgr_variants_warning_display, eval=l.undisplayed_smlv_pcgr_variants, results='asis'}
+render_warning_variants(d.smlv_pcgr_data_displayed)
+```
+
 ### Variants counts by sample
 ```{r smlv_pcgr_table_sample_name}
 smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'Sample name')
@@ -352,14 +359,6 @@ smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'SAGE hotspot')
 ```
 
 ### Variants
-```{r smlv_pcgr_variants_warning_files, eval=l.smlv_pcgr_files_missing, results='asis'}
-render_warning_files(d.smlv_pcgr_files_missing)
-```
-
-```{r smlv_pcgr_variants_warning_display, eval=l.undisplayed_smlv_pcgr_variants, results='asis'}
-render_warning_variants(d.smlv_pcgr_data_displayed)
-```
-
 ```{r smlv_pcgr_table_all_variants}
 smlv_pcgr_render_table(d.smlv_pcgr_data_subset)
 ```

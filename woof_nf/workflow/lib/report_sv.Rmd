@@ -1,5 +1,10 @@
 # Structural variants {.tabset .tabset-fade}
-```{r sv_constants}
+```{r sv_source_helpers}
+source('warning_functions.R')
+```
+
+## Summary
+```{r sv_summary_constants}
 v.sv_summary_table_columns <- c(
   'Sample name'='sample',
   'VCF type'='flabel',
@@ -20,7 +25,80 @@ v.sv_summary_table_columns_comma <- c(
   'FP',
   'FN'
 )
+```
 
+```{r sv_summary_functions}
+discover_sv_summary_files <- function(s.base_dir) {
+  s.sv_metrics_fp <- s.base_dir / '/structural_variants/eval_metrics.tsv'
+  tibble::tibble(
+    sample_name=basename(s.base_dir),
+    file_type='sv_metrics',
+    file=s.sv_metrics_fp,
+    exists=fs::file_exists(s.sv_metrics_fp)
+  )
+}
+
+get_sv_summary_data <- function(d.files) {
+  # Prepare SV summary data
+  # 1. read in SV data from file
+  # 2. select, order, and rename columns
+  # 3. format some numeric columns with commas
+  s.sv_file <- d.files$file[d.files$file_type=='sv_metrics']
+  readr::read_tsv(s.sv_file, col_types=readr::cols()) %>%
+    dplyr::select(all_of(v.sv_summary_table_columns)) %>%
+    dplyr::mutate(across(dplyr::all_of(v.sv_summary_table_columns_comma), scales::comma))
+}
+
+render_sv_summary_table <- function(d.sv_summary_data) {
+  n.table_height <- min(31 * nrow(d.sv_summary_data), 600)
+  d.sv_summary_data %>%
+    dplyr::mutate_if(is.character, as.factor) %>%
+    DT::datatable(
+      rownames=FALSE,
+      class='cell-border display compact',
+      filter=list(position='top', clear=FALSE, plain=FALSE),
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(scroller=TRUE, scrollX=TRUE, scrollY=n.table_height)) %>%
+    DT::formatStyle(
+      c('Recall', 'Precision'),
+      background=DT::styleColorBar(c(0.97, 1), color='#99ff99'),
+      backgroundSize='90% 90%', backgroundRepeat='no-repeat', backgroundPosition='center'
+    )
+}
+```
+
+```{r sv_summary_process}
+# NOTE: may be possible to generalise cleanly without too much work
+v.sv_summary_files <- purrr::map(v.sample_dirs, discover_sv_summary_files)
+v.sv_summary_files_exist <- v.sv_summary_files[sapply(v.sv_summary_files, function(d) { d$exists })]
+# Process data or create empty tibble
+if (length(v.sv_summary_files_exist) > 0) {
+  # Get and finalise SV summary data
+  d.sv_summary_data <- purrr::map(v.sv_summary_files, get_sv_summary_data) %>%
+    dplyr::bind_rows()
+} else {
+  d.sv_summary_data <- dplyr::bind_rows(v.sv_summary_table_columns)[NULL, ]
+}
+```
+
+```{r sv_summary_warnings}
+# NOTE: this pattern could probably be generalised as a fn
+# Missing file warning
+d.sv_summary_files <- dplyr::bind_rows(v.sv_summary_files)
+d.sv_summary_files_missing <- d.sv_summary_files[! d.sv_summary_files$exists, ]
+l.sv_summary_files_missing <- nrow(d.sv_summary_files_missing) > 0
+```
+
+```{r sv_summary_data_warning_files, eval=l.sv_summary_files_missing, results='asis'}
+render_warning_files(d.sv_summary_files_missing)
+```
+
+```{r sv_summary_table}
+render_sv_summary_table(d.sv_summary_data)
+```
+
+## Call errors
+```{r sv_fpfn_contants}
 v.sv_fpfn_table_columns <- c(
   'Call error'='FP_or_FN',
   'Sample name'='sample',
@@ -37,108 +115,151 @@ v.sv_fpfn_table_columns_comma <- c(
 )
 ```
 
-## Summary
-```{r sv_summary_data}
-# Prepare SV summary data
-# 1. read in SV data from files and bind rows
-# 2. select, order, and rename columns
-# 3. format some numeric columns with commas
-d.sv_summary_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
-  s.sv_metrics_fp <- paste0(s.base_dir, '/structural_variants/eval_metrics.tsv')
-  if (! fs::file_exists(s.sv_metrics_fp)) {
-    return(NULL)
-  }
-  readr::read_tsv(s.sv_metrics_fp, col_types=readr::cols())
-}) %>%
-  dplyr::bind_rows() %>%
-  dplyr::select(all_of(v.sv_summary_table_columns)) %>%
-  dplyr::mutate(across(dplyr::all_of(v.sv_summary_table_columns_comma), scales::comma))
-
-```
-
-```{r sv_summary_table}
-n.table_height <- min(31 * nrow(d.sv_summary_data), 600)
-d.sv_summary_data %>%
-  dplyr::mutate_if(is.character, as.factor) %>%
-  DT::datatable(
-    rownames=FALSE,
-    class='cell-border display compact',
-    filter=list(position='top', clear=FALSE, plain=FALSE),
-    extensions=c('Scroller', 'KeyTable'),
-    options=list(scroller=TRUE, scrollX=TRUE, scrollY=n.table_height)) %>%
-  DT::formatStyle(
-    c('Recall', 'Precision'),
-    background=DT::styleColorBar(c(0.97, 1), color='#99ff99'),
-    backgroundSize='90% 90%', backgroundRepeat='no-repeat', backgroundPosition='center'
-  )
-```
-
-## Call errors
-```{r sv_fpfn_data}
-# Prepare SV call error type data
-# 1. read in data and bind all rows together
-# 2. select, order, and rename columns
-# 3. format some numeric columns with commas
-d.sv_fpfn_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
+```{r sv_fpfn_functions}
+discover_sv_fpfn_files <- function(s.base_dir) {
   s.sv_fpfn_fp <- paste0(s.base_dir, '/structural_variants/fpfn.tsv')
-  if (! fs::file_exists(s.sv_fpfn_fp)) {
-    return(NULL)
-  }
-  readr::read_tsv(s.sv_fpfn_fp, col_types='ccccicic')
-}) %>%
-  dplyr::bind_rows() %>%
-  dplyr::select(dplyr::all_of(v.sv_fpfn_table_columns)) %>%
-  dplyr::mutate(across(dplyr::all_of(v.sv_fpfn_table_columns_comma), scales::comma))
+  tibble::tibble(
+    sample_name=basename(s.base_dir),
+    file_type='sv_fpfn',
+    file=s.sv_fpfn_fp,
+    exists=fs::file_exists(s.sv_fpfn_fp)
+  )
+}
+
+get_sv_fpfn_data <- function(d.files) {
+  # Prepare SV call error type data
+  # 1. read in data
+  # 2. select, order, and rename columns
+  # 3. format some numeric columns with commas
+  s.sv_fpfn_file <- d.files$file[d.files$file_type=='sv_fpfn']
+  readr::read_tsv(s.sv_fpfn_file, col_types='ccccicic') %>%
+    dplyr::select(dplyr::all_of(v.sv_fpfn_table_columns)) %>%
+    dplyr::mutate(across(dplyr::all_of(v.sv_fpfn_table_columns_comma), scales::comma))
+}
+
+render_sv_fpfn_table <- function(d.sv_fpfn_data) {
+  n.table_height <- min(31 * nrow(d.sv_fpfn_data), 600)
+  d.sv_fpfn_data %>%
+    dplyr::mutate_if(is.character, as.factor) %>%
+    DT::datatable(
+      rownames=FALSE,
+      class='cell-border display compact',
+      filter=list(position='top', clear=FALSE, plain=FALSE),
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(
+        scroller=TRUE,
+        scrollX=TRUE,
+        scrollY=n.table_height
+      )
+    ) %>%
+    DT::formatStyle(
+      'Call error',
+      backgroundColor=DT::styleEqual(
+        c('fp', 'fn'),
+        c('#99ff99', '#FFCCCB')
+      )
+    )
+}
+```
+
+```{r sv_fpfn_process}
+# NOTE: we should consider whether we need to subset variants for display
+# NOTE: may be possible to generalise cleanly without too much work
+v.sv_fpfn_files <- purrr::map(v.sample_dirs, discover_sv_fpfn_files)
+v.sv_fpfn_files_exist <- v.sv_fpfn_files[sapply(v.sv_fpfn_files, function(d) { d$exists })]
+# Process data or create empty tibble
+if (length(v.sv_fpfn_files_exist) > 0) {
+  # Get and finalise SV fpfn data
+  d.sv_fpfn_data <- purrr::map(v.sv_fpfn_files, get_sv_fpfn_data) %>%
+    dplyr::bind_rows()
+} else {
+  d.sv_fpfn_data <- dplyr::bind_rows(v.sv_fpfn_table_columns)[NULL, ]
+}
+```
+
+```{r sv_fpfn_warnings}
+# NOTE: this pattern could probably be generalised as a fn
+# Missing file warning
+d.sv_fpfn_files <- dplyr::bind_rows(v.sv_fpfn_files)
+d.sv_fpfn_files_missing <- d.sv_fpfn_files[! d.sv_fpfn_files$exists, ]
+l.sv_fpfn_files_missing <- nrow(d.sv_fpfn_files_missing) > 0
+```
+
+```{r sv_fpfn_data_warning_files, eval=l.sv_fpfn_files_missing, results='asis'}
+render_warning_files(d.sv_fpfn_files_missing)
 ```
 
 ```{r sv_fpfn_table}
-n.table_height <- min(31 * nrow(d.sv_fpfn_data), 600)
-d.sv_fpfn_data %>%
-  dplyr::mutate_if(is.character, as.factor) %>%
-  DT::datatable(
-    rownames=FALSE,
-    class='cell-border display compact',
-    filter=list(position='top', clear=FALSE, plain=FALSE),
-    extensions=c('Scroller', 'KeyTable'),
-    options=list(
-      scroller=TRUE,
-      scrollX=TRUE,
-      scrollY=n.table_height
-    )
-  ) %>%
-  DT::formatStyle(
-    'Call error',
-    backgroundColor=DT::styleEqual(
-      c('fp', 'fn'),
-      c('#99ff99', '#FFCCCB')
-    )
-  )
+render_sv_fpfn_table(d.sv_fpfn_data)
 ```
 
 ## SV circos {.tabset .tabset-pills}
-```{r results='asis', sv_circos}
-# Prepare circos info data
-# 1. locate circos plot on fs
-# 2. create tibble with sample name and circos plot filepath
-# 3. bind rows, join with SV summary data
-d.sv_circos_data <- purrr::map(v.sample_dirs, function(s.base_dir) {
-  sample_name <- basename(s.base_dir)
-  s.circos_fp <- suppressWarnings(fs::dir_ls(paste0(s.base_dir, '/structural_variants/circos/'), glob='*/circos_*png', fail=FALSE))
-  if (length(s.circos_fp)==0) {
-    return(NULL)
-  }
+```{r sv_circos_functions}
+discover_sv_circos_files <- function(s.base_dir) {
+  s.sample_name <- basename(s.base_dir)
+  s.sv_circos_fp <- s.base_dir / '/structural_variants/circos/' / paste0('circos_', s.sample_name, '.png')
   tibble::tibble(
-    'Sample name'=sample_name,
-    png_filepath=Sys.glob(s.circos_fp)
+    sample_name=s.sample_name,
+    file_type='sv_circos',
+    file=s.sv_circos_fp,
+    exists=fs::file_exists(s.sv_circos_fp)
   )
-}) %>%
-  dplyr::bind_rows() %>%
-  dplyr::left_join(d.sv_summary_data, by=c('Sample name'))
-
-for (i in 1:nrow(d.sv_circos_data)) {
-  cat('\n### ', paste(d.sv_circos_data$`Sample name`[i], '\n'))
-  cat(glue::glue('<img src="{d.sv_circos_data$png_filepath[i]}" alt="{d.sv_circos_data$`Sample name`[i]}" width="30%">'), '\n')
-  cat('\n***\n')
-
 }
+
+get_sv_circos_data <- function(d.files) {
+  d.sv_circos_file <- d.files[d.files$file_type=='sv_circos', ]
+  tibble::tibble(
+    'Sample name'=d.sv_circos_file$sample_name,
+    png_filepath=d.sv_circos_file$file
+  ) %>%
+    dplyr::bind_rows() %>%
+    dplyr::left_join(d.sv_summary_data, by=c('Sample name'))
+}
+
+render_sv_circos_plots <- function(d.sv_circos_data) {
+  if (nrow(d.sv_circos_data) < 1) {
+    cat('No plots available')
+  } else {
+    for (i in 1:nrow(d.sv_circos_data)) {
+      s.file <- d.sv_circos_data$file[i]
+      if (! fs::file_exists(s.file)) {
+        next
+      }
+      cat('\n### ', paste(d.sv_circos_data$sample_name[i], '\n'))
+      cat(glue::glue('<img src="{s.file}" alt="{d.sv_circos_data$sample_name[i]}" width="30%">'), '\n')
+      cat('\n***\n')
+    }
+  }
+}
+```
+
+```{r sv_circos_process}
+v.sv_circos_files <- purrr::map(v.sample_dirs, discover_sv_circos_files)
+v.sv_circos_files_exist <- v.sv_circos_files[sapply(v.sv_circos_files, function(d) { d$exists })]
+# Process data or create empty tibble
+if (length(v.sv_circos_files_exist) > 0) {
+  # Get and finalise SV circos data
+  # NOTE: SV circos data is essentially the file data tibble; no call for a `get_<section>_data` fn
+  # NOTE: we are not currently using conditional rendering for plots but have data available to do so
+  d.sv_circos_data <- dplyr::bind_rows(v.sv_circos_files) %>%
+    dplyr::left_join(d.sv_summary_data, by=c('sample_name'='Sample name'))
+} else {
+  d.sv_circos_data <- dplyr::bind_rows(v.sv_circos_files)[NULL, ]
+}
+```
+
+```{r sv_circos_warnings}
+# NOTE: this pattern could probably be generalised as a fn
+# Missing file warning
+d.sv_circos_files <- dplyr::bind_rows(v.sv_circos_files)
+d.sv_circos_files_missing <- d.sv_circos_files[! d.sv_circos_files$exists, ]
+l.sv_circos_files_missing <- nrow(d.sv_circos_files_missing) > 0
+```
+
+```{r sv_circos_warning_files, eval=l.sv_circos_files_missing, results='asis'}
+render_warning_files(d.sv_circos_files_missing)
+```
+
+```{r sv_circos_plots, results='asis'}
+render_sv_circos_plots(d.sv_circos_data)
 ```
