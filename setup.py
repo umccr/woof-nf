@@ -7,11 +7,13 @@ import woof_nf
 
 
 setuptools.setup(
-    name='woof-nf',
+    name='woof_nf',
     version=woof_nf.__version__,
     description='Variant comparison pipeline',
-    packages=setuptools.find_packages(),
+    packages=['woof_nf'],
+    # Use MANIFEST.in to recursively glob and include files in ./woof_nf/workflow/
+    include_package_data=True,
     entry_points={
-        'console_scripts': ['woof_nf=woof_nf.__main__:entry'],
+        'console_scripts': ['woof=woof_nf.__main__:entry'],
     }
 )
