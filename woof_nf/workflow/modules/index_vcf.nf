@@ -1,14 +1,15 @@
 process module_index_vcf {
-  publishDir "${params.output_dir}/${sample_name}/small_variants/1_filtered_vcfs/", pattern: '*.tbi'
+  publishDir "${publish_dir}", pattern: '*.tbi'
 
   input:
-  tuple val(sample_name), val(vcf_type), val(flags_in), path(vcf)
+  tuple val(attributes), path(vcf)
 
   output:
-  tuple val(sample_name), val(vcf_type), val(flags_out), path(vcf), path('*.tbi')
+  tuple val(attributes), path(vcf), path('*.tbi')
 
   script:
-  flags_out = flags_in ^ FlagBits.INDEXED
+  publish_dir = "${params.output_dir}/${attributes.sample_name}/small_variants/1_filtered_vcfs/"
+  attributes.indexed = true
   """
   tabix "${vcf}"
   """

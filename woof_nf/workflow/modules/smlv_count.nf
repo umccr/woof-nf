@@ -1,13 +1,12 @@
 process module_smlv_count {
   input:
-  tuple val(sample_name), val(vcf_type), val(flags), path(vcf)
+  tuple val(attributes), path(vcf)
 
   output:
-  tuple val(sample_name), path('*tsv')
+  tuple val(attributes), path('*tsv')
 
   script:
-  source = (flags & FlagBits.FILTERED) ? 'filtered' : 'input'
-  run = (flags & FlagBits.PTWO) ? 'two' : 'one'
+  source = attributes.filtered ? 'filtered' : 'input'
   uuid = UUID.randomUUID().toString()
   filename = "${uuid}.tsv"
   """
@@ -19,11 +18,11 @@ process module_smlv_count {
     variant_count=\$(sed '/^#/d' "${vcf}" | wc -l)
   fi;
   # Appropriately set run value
-  if [[ "${vcf_type}" =~ __intersect\$ ]]; then
+  if [[ "${attributes.file_source}" =~ __intersect\$ ]]; then
     run_value='n/a'
   else
-    run_value="${run}"
+    run_value="${attributes.position}"
   fi
-  echo -e "${vcf_type}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "${filename}"
+  echo -e "${attributes.file_source}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "${filename}"
   """
 }

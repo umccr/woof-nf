@@ -1,8 +1,8 @@
 process module_smlv_counts_combine {
-  publishDir "${params.output_dir}/${sample_name}/small_variants/"
+  publishDir "${params.output_dir}/${attributes.sample_name}/small_variants/"
 
   input:
-  tuple val(sample_name), path(counts)
+  tuple val(attributes), path(counts)
 
   output:
   path('*tsv')

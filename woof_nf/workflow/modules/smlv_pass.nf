@@ -1,18 +1,16 @@
 process module_smlv_pass {
-  publishDir "${params.output_dir}/${sample_name}/small_variants/1_filtered_vcfs/"
+  publishDir "${params.output_dir}/${attributes.sample_name}/small_variants/1_filtered_vcfs/"
 
   input:
-  tuple val(sample_name), val(vcf_type), val(flags_in), path(vcf)
+  tuple val(attributes), path(vcf)
 
   output:
-  tuple val(sample_name), val(vcf_type), val(flags_out), path('*.vcf.gz')
+  tuple val(attributes), path('*.vcf.gz')
 
   script:
-  // Unset has_index and set not filtered flag
-  flags_out = (flags_in & ~FlagBits.INDEXED)
-  flags_out = (flags_out ^ FlagBits.FILTERED)
-  run = (flags_in & FlagBits.PTWO) ? 'two' : 'one'
-  filename = "${vcf_type}__${run}__filtered__${vcf.getSimpleName()}"
+  attributes.indexed = false
+  attributes.filtered = true
+  filename = "${attributes.file_source}__${attributes.position}__filtered__${vcf.getSimpleName()}"
   """
   {
     bcftools view -h "${vcf}";

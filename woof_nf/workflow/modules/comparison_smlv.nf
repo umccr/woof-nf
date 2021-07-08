@@ -1,22 +1,22 @@
 process module_smlv_comparison {
-  publishDir "${params.output_dir}/${sample_name}/small_variants/3_comparison/", saveAs: { "${file_type}${fn_suffix}.tsv" }
+  publishDir "${publish_dir}", saveAs: { "${attributes.file_type}${fn_suffix}.tsv" }
 
   input:
-  tuple val(sample_name), val(file_type), val(flags), path(vcf_1), path(vcf_2), path(vcf_3)
+  tuple val(attributes), path(vcf_0), path(vcf_1), path(vcf_2)
 
   output:
   path('*.tsv')
 
   script:
-  source = (flags & FlagBits.FILTERED) ? 'all' : 'filtered'
-  fn_suffix = (source == 'filtered') ? '_filtered' : ''
+  publish_dir = "${params.output_dir}/${attributes.sample_name}/small_variants/3_comparison/"
+  fn_suffix = (attributes.source == 'filtered') ? '_filtered' : ''
   """
   comparison_smlv.py \
-    --sample_name "${sample_name}" \
-    --file_type "${file_type}" \
-    --source "${source}" \
-    --vcf_1 "${vcf_1}" \
-    --vcf_2 "${vcf_2}" \
-    --vcf_3 "${vcf_3}"
+    --sample_name "${attributes.sample_name}" \
+    --file_type "${attributes.file_type}" \
+    --source "${attributes.source}" \
+    --vcf_1 "${vcf_0}" \
+    --vcf_2 "${vcf_1}" \
+    --vcf_3 "${vcf_2}"
   """
 }
