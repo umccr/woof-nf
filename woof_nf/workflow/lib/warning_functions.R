@@ -41,6 +41,13 @@ render_warning_variants <- function(d.display_data) {
 
 # NOTE: see above re single usage
 get_variant_display_data <- function(d.full, d.subset) {
+  # Set columns and display names
+  v.column_display_names <- c(
+    'Sample name',
+    'Displayed'='displayed',
+    'Not displayed'='not_displayed',
+    'Total'='total'
+  )
   # For each sample, get count of total variants, displayed variants, and undisplayed variants
   # 1. count total variants
   # 2. count displayed variants
@@ -60,5 +67,5 @@ get_variant_display_data <- function(d.full, d.subset) {
   ) %>%
     tidyr::pivot_wider(names_from=type, values_from=n) %>%
     dplyr::mutate(not_displayed=total-displayed) %>%
-    dplyr::select(tidyselect::all_of(v.pcgr_variant_count_columns))
+    dplyr::select(tidyselect::all_of(v.column_display_names))
 }

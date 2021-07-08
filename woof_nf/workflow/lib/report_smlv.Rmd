@@ -199,13 +199,6 @@ v.pcgr_variant_types <- c(
   'Tier 4'='TIER_4',
   'Non-coding'='NONCODING'
 )
-# Variant count column display order and names
-v.pcgr_variant_count_columns <- c(
-  'Sample name',
-  'Displayed'='displayed',
-  'Not displayed'='not_displayed',
-  'Total'='total'
-)
 ```
 
 ```{r smlv_pcgr_functions}

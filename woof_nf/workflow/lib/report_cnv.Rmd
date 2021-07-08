@@ -56,11 +56,11 @@ get_cnv_summary_data <- function(d.files, v.umccr_genes) {
   d.cnv_data_diff <- readr::read_tsv(s.cnv_file, col_types='ciicddddcc') %>%
     dplyr::mutate(sample_name=s.sample_name) %>%
     dplyr::mutate(
-        mincn_1_2=paste0(min_cn.run1, '/', min_cn.run2),
-        maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
-        mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
-        maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
-        in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
+      mincn_1_2=paste0(min_cn.run1, '/', min_cn.run2),
+      maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
+      mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
+      maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
+      in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
     ) %>%
     dplyr::select(dplyr::all_of(v.cnv_table_columns)) %>%
     dplyr::mutate(across(dplyr::all_of(v.cnv_table_columns_comma), scales::comma))
@@ -100,11 +100,13 @@ if (length(v.cnv_files_exist) > 0) {
   v.umccr_genes <- readr::read_lines(s.umcccr_genes_fp)
   # Get and finalise CNV data
   d.cnv_summary_data <- purrr::map(v.cnv_files, get_cnv_summary_data, v.umccr_genes) %>%
+    purrr::discard(function(d) { nrow(d) == 0 }) %>%
     dplyr::bind_rows()
   # Subset data for display
   #  1. order by size of min/max difference
   #  2. select up to n entries
   d.cnv_summary_data_subset <- d.cnv_summary_data %>%
+    dplyr::group_by(`Sample name`) %>%
     dplyr::arrange(-(`Max diff` + `Max diff`)) %>%
     dplyr::slice(1:10)
 } else {
