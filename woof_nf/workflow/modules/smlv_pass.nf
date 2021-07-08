@@ -1,16 +1,17 @@
 process module_smlv_pass {
-  publishDir "${params.output_dir}/${attributes.sample_name}/small_variants/1_filtered_vcfs/"
+  publishDir "${params.output_dir}/${attributes_in.sample_name}/small_variants/1_filtered_vcfs/"
 
   input:
-  tuple val(attributes), path(vcf)
+  tuple val(attributes_in), path(vcf)
 
   output:
-  tuple val(attributes), path('*.vcf.gz')
+  tuple val(attributes_out), path('*.vcf.gz')
 
   script:
-  attributes.indexed = false
-  attributes.filtered = true
-  filename = "${attributes.file_source}__${attributes.position}__filtered__${vcf.getSimpleName()}"
+  filename = "${attributes_in.file_source}__${attributes_in.position}__filtered__${vcf.getSimpleName()}"
+  attributes_out = attributes_in.clone()
+  attributes_out.indexed = false
+  attributes_out.filtered = true
   """
   {
     bcftools view -h "${vcf}";

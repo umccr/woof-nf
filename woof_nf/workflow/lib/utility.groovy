@@ -156,6 +156,9 @@ def pair_files(ch_files) {
     .groupTuple()
     .map { group_key, attributes_list, files ->
       // Get index of first and second file
+      // NOTE: it is *critical* that the `def` keyword is used to declare variables here. For some
+      // reason that isn't clear to me when a function is called twice and executes near-simulatenously
+      // in NF and involves calling `.map` on a channel, variables leak between `.map` iterations.
       def index_one = null
       def index_two = null
       (index_one, index_two) = get_file_order(attributes_list)
@@ -176,17 +179,19 @@ def pair_files(ch_files) {
 def get_file_order(attributes_list) {
   def index_one = null
   def index_two = null
-  if (attributes_list[0].position == 'one') {
-    assert attributes_list[1].position == 'two'
+  def position_first = attributes_list[0].position
+  def position_second = attributes_list[1].position
+  if (position_first == 'one') {
+    assert position_second == 'two'
     index_one = 0
     index_two = 1
-  } else if (attributes_list[1].position == 'one') {
-    assert attributes_list[0].position == 'two'
+  } else if (position_second == 'one') {
+    assert position_first == 'two'
     index_one = 1
     index_two = 0
+  } else if (position_first == null && position_second == null) {
+    // Allow positions to be null but only if they both are
   } else {
-    println attributes_list[0].position
-    println attributes_list[1].position
     assert false
   }
   return [index_one, index_two]

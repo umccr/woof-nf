@@ -1,8 +1,8 @@
 process module_cnv_comparison {
-  publishDir "${params.output_dir}/${attributes.sample_name}/copy_number_variants/"
+  publishDir "${params.output_dir}/${attributes_in.sample_name}/copy_number_variants/"
 
   input:
-  tuple val(attributes), path('1.tsv'), path('2.tsv')
+  tuple val(attributes_in), path('1.tsv'), path('2.tsv')
 
   output:
   path('cn_diff.tsv')
