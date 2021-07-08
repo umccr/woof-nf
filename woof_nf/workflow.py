@@ -98,6 +98,7 @@ def run(inputs_fp: pathlib.Path, output_dir: pathlib.Path, resume: bool, docker:
 
 
 def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
+    # NOTE: using -ansi-log false could simplify
     # Line store
     title = str()
     executor = str()
