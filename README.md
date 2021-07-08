@@ -18,6 +18,7 @@ pipeline.
 * [Usage](#usage)
 * [Outputs](#outputs)
 * [Requirements](#requirements)
+* [Known Issues](#known-issues)
 * [License](#license)
 
 ## Installation
@@ -166,6 +167,16 @@ Mandatory R packages:
 Optional requirements:
 * aws-cli (AWS execution only)
 * Docker (local Docker execution only)
+
+## Known Issues
+* report is required to process/compute data; all should be pre-computed only requiring render
+* setup.py is broken; not capturing or pointing to NF workflow once installed
+* CLI argument checking is incomplete
+* not all applicable columns are formatted with commas in report
+* report is generated on execution machine i.e. never on AWS
+* data subsetting for report is naive; needs improvement
+* CNV diff coord data is not currently displayed in report
+* tables are sometimes display with inconsistent styling/search box dimensions
 
 ## License
 Software and code in this repository is under [GNU General Public License
