@@ -171,6 +171,7 @@ Optional requirements:
 
 ## Known Issues
 * report is required to process/compute data; all should be pre-computed only requiring render
+* AWS execution can take s3:// URIs but this isn't currently allowable through the wrapper script
 * CLI argument checking is incomplete
 * not all applicable columns are formatted with commas in report
 * report is generated on execution machine i.e. never on AWS
