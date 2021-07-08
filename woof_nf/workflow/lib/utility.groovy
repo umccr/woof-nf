@@ -133,7 +133,7 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
       // Check attributes are consistent
       check_attribute_consistency(attributes_list)
       // Use first attribute instance and update
-      attributes = attributes_list[0]
+      def attributes = attributes_list[0].clone()
       attributes.position = null
       return [
         attributes,
@@ -150,7 +150,7 @@ def pair_files(ch_files) {
   ch_result = ch_files
     // As we cannot directly call groupTuple on Attributes, we construct the group key and place at index 0:
     // Format: [sample_name, attributes, file]
-    .map { attrs, file -> tuple( groupKey(attrs.sample_name, 2), attrs, file ) }
+    .map { attrs, file -> tuple( groupKey(attrs.sample_name, 0), attrs, file ) }
     // Now we can collect with groupTuple
     // Format: [sample_name, [attributes_one, attributes_two], [file_one, file_two]]
     .groupTuple()

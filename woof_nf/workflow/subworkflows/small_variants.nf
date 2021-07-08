@@ -38,7 +38,7 @@ workflow workflow_small_variants {
     ch_smlv_intersects = module_smlv_intersect(ch_smlv_prepared)
 
     // Make SNV comparison
-    // Format (module_smlv_comparison: input): [sample_name, vcf_type, flags, vcf_0, vcf_1, vcf_2]
+    // Format (module_smlv_comparison: input): [attributes, vcf_0, vcf_1, vcf_2]
     module_smlv_comparison(
         ch_smlv_intersects.map { it.flatten() }
     )
@@ -48,8 +48,9 @@ workflow workflow_small_variants {
     ch_smlv_to_count = Channel.empty().mix(
        // Update flag position for unpacked VCFs; `flags` variable here always in respect to vcf_one wrt position
       ch_smlv_prepared.flatMap { attributes, vcf_one, index_one, vcf_two, index_two ->
-        attrs_one = attributes
+        attrs_one = attributes.clone()
         attrs_two = attributes.clone()
+        attrs_one.position = 'one'
         attrs_two.position = 'two'
         return [[attrs_one, vcf_one], [attrs_two, vcf_two]]
       },
@@ -61,7 +62,7 @@ workflow workflow_small_variants {
         d[1].collect { dd ->
           attributes = d[0].clone()
           attributes.file_source = "${attributes.file_source}__intersect"
-          [attributes.clone(), dd]
+          [attributes, dd]
         }
       }
     )
@@ -69,5 +70,12 @@ workflow workflow_small_variants {
     // Variant counts
     // Format (ch_smlv_counts): [attributes, vcf_counts]
     ch_smlv_counts = module_smlv_count(ch_smlv_to_count)
-    module_smlv_counts_combine(ch_smlv_counts.groupTuple())
+    ch_smlv_counts_grouped = ch_smlv_counts
+      // As we cannot directly call groupTuple on Attributes, we construct the group key and place at index 0:
+      // Format: [sample_name, file]
+      .map { attrs, file -> tuple( groupKey(attrs.sample_name, 0), file ) }
+      // Now we can collect with groupTuple
+      // Format: [sample_name, [files]]
+      .groupTuple()
+    module_smlv_counts_combine(ch_smlv_counts_grouped)
 }
