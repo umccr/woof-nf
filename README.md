@@ -59,7 +59,7 @@ mamba install -y -c bioconda perl-app-cpanminus
 cpan Statistics::Basic
 ```
 
-### Running on AWS
+### Requirements for AWS
 There is an AWS plugin packaged with Nextflow that allows execution of tasks through AWS Batch. The
 following AWS infrastructure are required:
 1. Batch job queue,
