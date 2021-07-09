@@ -23,42 +23,37 @@ pipeline.
 * [License](#license)
 
 ## Installation
-It is recommended that Conda is used for installation and provisioning of dependencies:
-```bash
-# Create a Conda environment and install mamba
-conda create \
-    --prefix $(pwd -P)/conda_env/ \
-    --channel conda-forge \
-    --channel defaults \
-    --yes \
-    mamba
+### Docker
+A [Docker image](https://hub.docker.com/r/scwatts/woof-nf) for `woof-nf` is available.
 
-# Activate the environment and install dependencies
-conda activate conda_env/
-mamba install \
-    --file infrastructure/conda_env.txt \
-    --channel pdiakumis \
-    --channel bioconda \
-    --channel conda-forge \
-    --channel defaults \
-    --yes
+### Conda
+`woof-nf` is also available as a Conda package:
+```bash
+conda create \
+  --prefix $(pwd -P)/conda_env/ \
+  --channel scwatts \
+  --channel pdiakumis \
+  --channel bioconda \
+  --channel conda-forge \
+  --channel defaults \
+  --yes \
+  woof-nf
 ```
 
-> I intend to update the Docker image so it also contains the pipeline itself to allow another mode
-> execution and remove Nextflow as a dependency
-
-Alternatively you can use the `woof-nf` [Docker image](https://hub.docker.com/r/scwatts/woof-nf),
-provided you have Docker and Nextflow already installed.
-
-### macOS addendum
-The Conda `circos` package is currently broken on macOS. To fix the install run:
+The `circos` Conda package is currently broken. To fix the install run:
 ```bash
-# Apply fix for GD and libwebp
-ln -s ${CONDA_PREFIX}/lib/libwebp.7.dylib ${CONDA_PREFIX}/lib/libwebp.6.dylib
-
-# Circos installed via conda also requires manual install of Statistics::Basic
-mamba install -y -c bioconda perl-app-cpanminus
-cpan Statistics::Basic
+# Activate
+conda activate conda_env/
+# Apply fix: GD and libwebp; Statistics::Basic (macOS only)
+if [[ "$(uname)" == "Darwin" ]]; then
+  ln -s ${CONDA_PREFIX}/lib/libwebp.7.dylib ${CONDA_PREFIX}/lib/libwebp.6.dylib
+  conda install -y -c bioconda perl-app-cpanminus
+  cpan Statistics::Basic
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+  ln -s ${CONDA_PREFIX}/lib/libwebp.so.7 ${CONDA_PREFIX}/lib/libwebp.so.6
+else
+  echo "error: system appears unsupported, got $(uname) but expected Linux or Darwn" >&2
+fi
 ```
 
 ### Requirements for AWS
@@ -84,13 +79,30 @@ Running locally:
   --output_dir output/
 ```
 
-Running locally with Docker:
+Running locally using Docker to provide dependencies:
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
   --run_dir_two data/second_set/ \
   --output_dir output/
   --docker
+```
+
+Running locally entirely within Docker (not currently recommended):
+```bash
+# Paths *must* be absolute
+RUN_DIR_ONE=$(pwd -P)/data/run_one/
+RUN_DIR_TWO=$(pwd -P)/data/run_two/
+OUTPUT_DIR=$(pwd -P)/output/
+docker run \
+  --mount type=bind,source=${RUN_DIR_ONE},target=/run_one/,readonly \
+  --mount type=bind,source=${RUN_DIR_TWO},target=/run_two/,readonly \
+  --mount type=bind,source=${OUTPUT_DIR},target=/output/ \
+  woof-nf \
+  woof \
+    --run_dir_one /run_one/ \
+    --run_dir_two /run_two/ \
+    --output_dir /output/
 ```
 
 Running on AWS:
@@ -172,6 +184,8 @@ Optional requirements:
 ## Known Issues
 * report is required to process/compute data; all should be pre-computed only requiring render
 * AWS execution can take s3:// URIs but this isn't currently allowable through the wrapper script
+* resume is not currently possible when running entirely within Docker
+    - NF work directory option needs to be exposed and set to an non-ephemeral location
 * CLI argument checking is incomplete
 * not all applicable columns are formatted with commas in report
 * report is generated on execution machine i.e. never on AWS
