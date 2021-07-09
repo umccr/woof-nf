@@ -1,3 +1,4 @@
+import collections
 import pathlib
 import sys
 from typing import Dict, List, Tuple
@@ -74,6 +75,16 @@ class SourceFiles:
 
 
 def collect(dir_one: List[pathlib.Path], dir_two: List[pathlib.Path]) -> Dict:
+    # Check input directories are not the same
+    paths_duplicated = list()
+    for path, count in collections.Counter(dir_one + dir_two).items():
+        if count > 1:
+            paths_duplicated.append(path)
+    if paths_duplicated:
+        log.render(log.ftext('error: same input directory provided as run one and run two:', c='red'))
+        for path in paths_duplicated:
+            log.render(log.ftext(f'  - {path}', c='red'))
+        sys.exit(1)
     # Log directories to be searched
     log.task_msg_title('Discovering input files')
     log.render('\nDirectories searched:')
@@ -85,6 +96,13 @@ def collect(dir_one: List[pathlib.Path], dir_two: List[pathlib.Path]) -> Dict:
     inputs_two = discover_run_files(dir_two, run='two')
     # Match files from the two runs
     file_data = match_inputs(inputs_one, inputs_two)
+    # Ensure we have some files to match
+    for source, files in file_data.items():
+        if files.samples_matched:
+            break
+    else:
+        log.render(log.ftext('error: no samples matched', c='red'))
+        sys.exit(1)
     # Create and render tables displaying results
     for source_name, source_data in file_data.items():
         if source_name == 'umccrise':
