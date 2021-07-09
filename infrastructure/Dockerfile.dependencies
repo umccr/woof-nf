@@ -1,7 +1,7 @@
 # Build on top of Ubuntu LTS (focal)
 FROM ubuntu:20.04
 
-# Set conda environment name
+# Set Conda environment name
 ARG ENV_NAME=woof-nf
 
 # Enable non-interactive tzdata install and config
@@ -12,15 +12,15 @@ ARG TZ='Etc/UTC'
 # NOTE:
 #   ca-certificates: required for https/curl
 #   bsdmainutils: provides hexdump (used in nf process module_smlv_count)
-#   libgd-perl: required by circos; conda seemlying doesn't install this dep itself
+#   libx11-6: required for rendering report images
 #   tzdata: required for readr
 RUN \
   apt-get update && \
-  apt-get install -y --no-install-recommends \
+  apt-get install --yes --no-install-recommends \
+    bsdmainutils \
     ca-certificates  \
     curl \
-    bsdmainutils \
-    libgd-perl \
+    libx11-6 \
     python3 \
     tzdata  \
     unzip && \
@@ -41,12 +41,11 @@ RUN \
   /bin/bash miniconda.sh -b -p /opt/miniconda/ && \
   rm miniconda.sh
 
-# Prepare conda environment
-COPY infrastructure/conda_env.yaml .
-# Execute RUN with /bin/bash; /bin/sh produces error when deactivating conda env
+# Prepare Conda environment
+# Execute RUN with /bin/bash; /bin/sh produces error when deactivating Conda env
 SHELL ["/bin/bash", "-c"]
 RUN \
-  # Source miniconda software
+  # Source Miniconda software
   . /opt/miniconda/etc/profile.d/conda.sh && \
   # Create and activate new environment, install mamba
   conda create -n "${ENV_NAME}" && \
@@ -54,20 +53,24 @@ RUN \
   conda install -c conda-forge mamba && \
   # Install dependencies, clean up
   mamba install \
-    -c bioconda \
-    -c conda-forge \
-    # Provides r-rock
-    -c pdiakumis \
-    --file conda_env.yaml && \
+    --channel scwatts \
+    # Provides r-rock, r-woofr
+    --channel pdiakumis \
+    --channel bioconda \
+    --channel conda-forge \
+    --channel defaults \
+    --yes \
+    woof-nf && \
+  # Fix circos install
+  ln -s ${CONDA_PREFIX}/lib/libwebp.so.7 ${CONDA_PREFIX}/lib/libwebp.so.6 && \
   # Clean up
-  # Base conda directory, including /opt/miniconda/pkgs/
-  conda clean --all --force-pkgs-dirs -y && \
-  # New conda env, including /opt/miniconda/envs/${ENV_NAME}/pkgs/
-  /opt/miniconda/envs/${ENV_NAME}/bin/conda clean --all --force-pkgs-dirs -y && \
-  rm conda_env.yaml
+  # Base Conda directory, including /opt/miniconda/pkgs/
+  conda clean --all --force-pkgs-dirs --yes && \
+  # New Conda env, including /opt/miniconda/envs/${ENV_NAME}/pkgs/
+  /opt/miniconda/envs/${ENV_NAME}/bin/conda clean --all --force-pkgs-dirs --yes
 # Revert RUN execution shell to /bin/sh as good practise
 SHELL ["/bin/sh", "-c"]
 
-# Add conda env to PATH
+# Add Conda env to PATH
 ENV PATH="/opt/miniconda/envs/${ENV_NAME}/bin:/opt/miniconda/bin:${PATH}"
 ENV CONDA_PREFIX="/opt/miniconda/envs/${ENV_NAME}"
