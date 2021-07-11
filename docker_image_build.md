@@ -1,3 +1,5 @@
+# Docker image build instructions
+## Build
 ```bash
 # Set build and upload info
 NAME=woof-nf
@@ -15,7 +17,8 @@ HUB_URI_REMOTE="${HUB_PROVIDER_URL}/${NAME}:${VERSION}"
 docker build -t "${NAME}" -f infrastructure/Dockerfile.dependencies .
 ```
 
-Upload to AWS ECR:
+## Upload
+### Elastic Container Registry
 ```bash
 # Tag new image with remote AWS URI
 docker tag "${NAME}" "${AWS_URI_REMOTE}"
@@ -28,7 +31,7 @@ docker push "${AWS_URI_REMOTE}"
 rm /Users/stephen/.docker/config.json
 ```
 
-Upload to Docker Hub:
+### Docker Hub
 ```bash
 # Tag image with remote Docker Hub URI
 docker tag "${NAME}" "${HUB_URI_REMOTE}"

@@ -23,11 +23,13 @@ pipeline.
 * [License](#license)
 
 ## Installation
-### Docker
-A [Docker image](https://hub.docker.com/r/scwatts/woof-nf) for `woof-nf` is available.
+Using Conda to install `woof-nf` is recommended. A [Docker
+image](https://hub.docker.com/r/scwatts/woof-nf) is also available though it is primarily used for
+AWS Batch execution. While possible to run `woof-nf` partially or entirely within the Docker
+container locally, doing so is not fully supported.
 
 ### Conda
-`woof-nf` is also available as a Conda package:
+Create Conda environment and install `woof-nf`:
 ```bash
 conda create \
   --prefix $(pwd -P)/conda_env/ \
@@ -77,32 +79,6 @@ Running locally:
   --run_dir_one data/first_set/ \
   --run_dir_two data/second_set/ \
   --output_dir output/
-```
-
-Running locally using Docker to provide dependencies:
-```bash
-./woof_nf-runner.py \
-  --run_dir_one data/first_set/ \
-  --run_dir_two data/second_set/ \
-  --output_dir output/
-  --docker
-```
-
-Running locally entirely within Docker (not currently recommended):
-```bash
-# Paths *must* be absolute
-RUN_DIR_ONE=$(pwd -P)/data/run_one/
-RUN_DIR_TWO=$(pwd -P)/data/run_two/
-OUTPUT_DIR=$(pwd -P)/output/
-docker run \
-  --mount type=bind,source=${RUN_DIR_ONE},target=/run_one/,readonly \
-  --mount type=bind,source=${RUN_DIR_TWO},target=/run_two/,readonly \
-  --mount type=bind,source=${OUTPUT_DIR},target=/output/ \
-  woof-nf \
-  woof \
-    --run_dir_one /run_one/ \
-    --run_dir_two /run_two/ \
-    --output_dir /output/
 ```
 
 Running on AWS:
