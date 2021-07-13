@@ -176,9 +176,14 @@ def perform_matching(inputs_one: Dict, inputs_two: Dict) -> SourceFiles:
         file_groups[key].append(f)
     # Check grouped files match
     sample_files: Dict[str, Dict[str, FilePair]] = dict()
-    for file_group in file_groups.values():
+    for (sample_name, inputtype), file_group in file_groups.items():
         # Set file from run one and run two
-        assert len(file_group) <= 2
+        if len(file_group) > 2:
+            msg = log.ftext(f'error: matched more than two files for {sample_name}:{inputtype}:', c='red')
+            log.render(msg)
+            for f in file_group:
+                log.render(log.ftext(f'  {f.filepath}', c='red'))
+            sys.exit(1)
         file_one = file_two = None
         for i, f in enumerate(file_group):
             if f.run == 'one':
