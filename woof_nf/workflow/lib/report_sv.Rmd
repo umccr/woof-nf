@@ -1,8 +1,4 @@
 # Structural variants {.tabset .tabset-fade}
-```{r sv_source_helpers}
-source('warning_functions.R')
-```
-
 ## Summary
 ```{r sv_summary_constants}
 v.sv_summary_table_columns <- c(

@@ -1,8 +1,4 @@
 # Small variants {.tabset .tabset-fade}
-```{r smlv_source_helpers}
-source('warning_functions.R')
-```
-
 ## Summary
 ```{r smlv_summary_constants}
 # Small variant summary table columns

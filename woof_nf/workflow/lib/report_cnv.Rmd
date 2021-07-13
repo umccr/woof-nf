@@ -1,8 +1,4 @@
 # Copy number variants {.tabset .tabset-fade}
-```{r cnv_source_helpers}
-source('warning_functions.R')
-```
-
 ## Summary
 ```{r cnv_summary_constants}
 v.cnv_table_columns <- c(
