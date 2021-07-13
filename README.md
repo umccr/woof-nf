@@ -81,12 +81,12 @@ Running locally:
   --output_dir output/
 ```
 
-Running on AWS:
+Running on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
   --run_dir_two data/second_set/ \
-  --output_dir output/
+  --output_dir output/ \
   --executor aws \
   --s3_bucket s3://bucket-name/object-key/
 ```
@@ -94,7 +94,7 @@ Running on AWS:
 Note that AWS configuration is currently hard coded in `woof_nf/aws.py`.
 
 ## Outputs
-The output directory contains:
+The `woof-nf` output directory contains:
 * a report detailing results (`report.html`),
 * individual directories for sample outputs (further details below),
 * the pipeline log (`pipeline_log.txt`),
@@ -104,34 +104,34 @@ The output directory contains:
 Here is the directory structure of an example output:
 ```text
 output/
-├── 2016_249_17_MH_P033__CCR170115b_MH17T002P033
-├── B_ALL_Case_10__MDX190025_B_ALL_Case_10T
-├── COLO829_1__Colo829
-├── COLO829_2__Colo829_60pc
-├── CUP-Pairs8__PRJ180660_8_DNA009529_FFPE
-├── SEQC-II-50pc__SEQC-II_Tumor_50pc
-├── SFRC01073__PRJ180598_SFRC01073-S2T
+├── 2016_249_17_MH_P033__CCR170115b_MH17T002P033/
+├── B_ALL_Case_10__MDX190025_B_ALL_Case_10T/
+├── COLO829_1__Colo829/
+├── COLO829_2__Colo829_60pc/
+├── CUP-Pairs8__PRJ180660_8_DNA009529_FFPE/
+├── SEQC-II-50pc__SEQC-II_Tumor_50pc/
+├── SFRC01073__PRJ180598_SFRC01073-S2T/
 ├── input_files.tsv
 ├── nextflow.config
 ├── pipeline_log.txt
 └── report.html
 ```
 
-Each sample directory contains three directories, which are self-explanatory. You can find data
-presented in the `report.html` file in the appropriate sample directory. Here is the directory
-structure of one sample from the example output:
+Each sample directory contains three subdirectories, and you can find data presented in the
+`report.html` file in the appropriate sample subdirectory. Here is the directory structure of one
+sample from the example output:
 ```text
 output/COLO829_1__Colo829/
 ├── copy_number_variants
 │   ├── cn_diff.tsv
 │   └── cn_diff_coord.tsv
 ├── small_variants
-│   ├── 1_filtered_vcfs
-│   ├── 2_variants_intersect
-│   ├── 3_comparison
+│   ├── 1_filtered_vcfs/
+│   ├── 2_variants_intersect/
+│   ├── 3_comparison/
 │   └── counts.tsv
 └── structural_variants
-    ├── circos
+    ├── circos/
     ├── eval_metrics.tsv
     └── fpfn.tsv
 ```
