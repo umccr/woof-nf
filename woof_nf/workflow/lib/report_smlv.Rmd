@@ -311,12 +311,9 @@ if (length(v.smlv_pcgr_files_exist) > 0) {
     dplyr::bind_rows() %>%
     dplyr::mutate(Position=scales::comma(Position, accuracy=1))
   # Subset top n, ordering by supposed priority
-  #   1. group by sample and then order by PCGR tier
-  #   2. select top n entries
-  d.smlv_pcgr_data_subset <- d.smlv_pcgr_data %>%
-    dplyr::group_by(`Sample name`) %>%
-    dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`)) %>%
-    dplyr::slice(1:10)
+  d.smlv_pcgr_data_sorted <- d.smlv_pcgr_data %>%
+    dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`))
+  d.smlv_pcgr_data_subset <- subset_variants(d.smlv_pcgr_data_sorted, v.table_display_max)
 } else {
   d.smlv_pcgr_data <- d.smlv_pcgr_data_subset <- dplyr::bind_rows(v.smlv_vcf_columns)[NULL, ]
 }

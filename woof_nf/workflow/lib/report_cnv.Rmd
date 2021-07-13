@@ -105,13 +105,10 @@ if (length(v.cnv_files_exist) > 0) {
   d.cnv_summary_data <- purrr::map(v.cnv_files, get_cnv_summary_data, v.umccr_genes) %>%
     purrr::discard(function(d) { nrow(d) == 0 }) %>%
     dplyr::bind_rows()
-  # Subset data for display
-  #  1. order by size of min/max difference
-  #  2. select up to n entries
-  d.cnv_summary_data_subset <- d.cnv_summary_data %>%
-    dplyr::group_by(`Sample name`) %>%
-    dplyr::arrange(-(`Max diff` + `Max diff`)) %>%
-    dplyr::slice(1:10)
+  # Subset top n, ordering by supposed priority
+  d.cnv_summary_data_sorted <- d.cnv_summary_data %>%
+    dplyr::arrange(-(`Lower estimate difference` + `Upper estimate difference`))
+  d.cnv_summary_data_subset <- subset_variants(d.cnv_summary_data_sorted, v.table_display_max)
 } else {
   d.cnv_summary_data <- d.cnv_summary_data_subset <- dplyr::bind_rows(v.cnv_table_columns)[NULL, ]
 }

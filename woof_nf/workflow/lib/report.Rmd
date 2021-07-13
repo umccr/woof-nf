@@ -55,9 +55,33 @@ v.table_cell_fill_colour_red <- '#ffcbc6'
 v.table_cell_fill_range <- c(0.97, 1)
 
 v.table_filter_options <- list(position='top', clear=FALSE, plain=FALSE)
+
+v.table_display_max <- 500
 ```
 
 ```{r shared_functions}
+# Subset to n variants across samples
+subset_variants <- function(d.variants, n.total=15) {
+  # Get variant display count for each sample
+  v.variant_display_count <- get_variant_display_counts(d.variants %>% dplyr::count(`Sample name`), n.total)
+  # Some sanity checks
+  v.sample_names <- unique(d.smlv_pcgr_data$`Sample name`)
+  all(v.sample_names %in% names(v.variant_display_count))
+  length(v.sample_names) == length(v.variant_display_count)
+  # Subet and bind results
+  unique(d.variants$`Sample name`) %>%
+    purrr::map(function(s.name) {
+      n.variants <- v.variant_display_count[s.name]
+      if (n.variants < 1) {
+        return(d.variants[NULL, ])
+      }
+      d.variants %>%
+        dplyr::filter(`Sample name`==s.name) %>%
+        dplyr::slice(1:n.variants)
+    }) %>%
+    dplyr::bind_rows()
+}
+
 # Get variant counts for subsetting
 get_variant_display_counts <- function(d.variant_counts, n.total) {
   # Set initial target per sample
