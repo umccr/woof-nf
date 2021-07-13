@@ -9,12 +9,13 @@ process module_smlv_comparison {
 
   script:
   publish_dir = "${params.output_dir}/${attributes_in.sample_name}/small_variants/3_comparison/"
+  subset = attributes_in.filtered ? 'filtered' : 'pass'
   fn_suffix = attributes_in.filtered ? '_filtered' : ''
   """
   comparison_smlv.py \
     --sample_name "${attributes_in.sample_name}" \
     --file_type "${attributes_in.file_source}" \
-    --source "${attributes_in.variant_type}" \
+    --source "${subset}" \
     --vcf_1 "${vcf_0}" \
     --vcf_2 "${vcf_1}" \
     --vcf_3 "${vcf_2}"

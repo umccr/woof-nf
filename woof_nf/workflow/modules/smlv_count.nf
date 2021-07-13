@@ -6,7 +6,8 @@ process module_smlv_count {
   tuple val(attributes_out), path('*tsv')
 
   script:
-  source = attributes_in.filtered ? 'filtered' : 'input'
+  file_source = attributes_in.file_source
+  filtered = attributes_in.filtered ? 'filtered' : 'pass'
   attributes_out = attributes_in.clone()
   """
   # Check for gzip magic bits
@@ -23,6 +24,6 @@ process module_smlv_count {
     run_value="${attributes_in.position}"
   fi
   filename=\$(md5sum < ${vcf} | cut -f1 -d' ')
-  echo -e "${attributes_in.file_source}\t${vcf.getSimpleName()}\t\${run_value}\t${source}\t\${variant_count}" > "\${filename}.tsv"
+  echo -e "${file_source}\t${vcf.getSimpleName()}\t\${run_value}\t${filtered}\t\${variant_count}" > "\${filename}.tsv"
   """
 }
