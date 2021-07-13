@@ -5,12 +5,12 @@ v.cnv_table_columns <- c(
   'Sample name'='sample_name',
   'Gene'='gene',
   'UMCCR gene'='in_umccr',
-  'Min different'='min_diff',
-  'Max different'='max_diff',
-  'Min (first/second)'='mincn_1_2',
-  'Max (first/second)'='maxcn_1_2',
-  'Min diff'='mincn_diff',
-  'Max diff'='maxcn_diff',
+  'Different lower estimate'='min_diff',
+  'Different upper estimate'='max_diff',
+  'Lower estimate (first/second)'='mincn_1_2',
+  'Upper estimate (first/second)'='maxcn_1_2',
+  'Lower estimate difference'='mincn_diff',
+  'Upper estimate difference'='maxcn_diff',
   'Chromosome'='chrom',
   'Start'='start',
   'End'='end'
@@ -21,8 +21,8 @@ v.cnv_table_columns_comma <- c(
 )
 v.cnv_table_columns_colour <- c(
   'UMCCR gene',
-  'Min different',
-  'Max different'
+  'Different lower estimate',
+  'Different upper estimate'
 )
 ```
 
@@ -44,8 +44,9 @@ get_cnv_summary_data <- function(d.files, v.umccr_genes) {
   #      - combine min/max for run 1 and run 2,
   #      - difference of min/max b/n runs, and
   #      - is a UMCCR gene
-  # 3. order and rename colums
-  # 4. add format appropriate numeric columns with commas
+  # 3. recode TRUE/FALSE as Yes/No
+  # 4. order and rename columns
+  # 5. add format appropriate numeric columns with commas
   d.cnv_file <- d.files[d.files$file_type=='cnv_diff', ]
   s.cnv_file <- d.cnv_file$file
   s.sample_name <- d.cnv_file$sample_name
@@ -56,7 +57,11 @@ get_cnv_summary_data <- function(d.files, v.umccr_genes) {
       maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
       mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
       maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
-      in_umccr=ifelse(gene %in% v.umccr_genes, 'TRUE', 'FALSE')
+      in_umccr=ifelse(gene %in% v.umccr_genes, 'Yes', 'No')
+    ) %>%
+    dplyr::mutate(
+      min_diff=dplyr::recode(min_diff, 'TRUE'='Yes', 'FALSE'='No'),
+      max_diff=dplyr::recode(max_diff, 'TRUE'='Yes', 'FALSE'='No')
     ) %>%
     dplyr::select(dplyr::all_of(v.cnv_table_columns)) %>%
     dplyr::mutate(across(dplyr::all_of(v.cnv_table_columns_comma), scales::comma))
@@ -80,7 +85,7 @@ render_cnv_summary_table <- function(d.cnv_summary_data_subset) {
     DT::formatStyle(
       v.cnv_table_columns_colour,
       backgroundColor=DT::styleEqual(
-        'TRUE',
+        'Yes',
         v.table_cell_fill_colour_red
       )
     )

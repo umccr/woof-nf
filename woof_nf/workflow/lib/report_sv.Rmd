@@ -21,6 +21,10 @@ v.sv_summary_table_columns_comma <- c(
   'FP',
   'FN'
 )
+v.sv_summary_table_columns_round <- c(
+  'Recall',
+  'Precision'
+)
 ```
 
 ```{r sv_summary_functions}
@@ -135,10 +139,12 @@ discover_sv_fpfn_files <- function(s.base_dir) {
 get_sv_fpfn_data <- function(d.files) {
   # Prepare SV call error type data
   # 1. read in data
-  # 2. select, order, and rename columns
-  # 3. format some numeric columns with commas
+  # 2. recode fp='False positive' and fn='False negative'
+  # 3. select, order, and rename columns
+  # 4. format some numeric columns with commas
   s.sv_fpfn_file <- d.files$file[d.files$file_type=='sv_fpfn']
   readr::read_tsv(s.sv_fpfn_file, col_types='ccccicic') %>%
+    dplyr::mutate(FP_or_FN=dplyr::recode(FP_or_FN, 'fp'='False positive', 'fn'='False negative')) %>%
     dplyr::select(dplyr::all_of(v.sv_fpfn_table_columns)) %>%
     dplyr::mutate(across(dplyr::all_of(v.sv_fpfn_table_columns_comma), scales::comma))
 }
@@ -160,7 +166,7 @@ render_sv_fpfn_table <- function(d.sv_fpfn_data) {
     DT::formatStyle(
       'Call error',
       backgroundColor=DT::styleEqual(
-        c('fp', 'fn'),
+        c('False positive', 'False negative'),
         c(v.table_cell_fill_colour_green, v.table_cell_fill_colour_red)
       )
     )
