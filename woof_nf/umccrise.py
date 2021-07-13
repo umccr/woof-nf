@@ -38,6 +38,15 @@ def process_input_directory(dirpath: pathlib.Path, run: str) -> List:
         glob_expr = str(dirpath / f'**/{subdir}/*{suffix}')
         for input_fp_str in glob.glob(glob_expr, recursive=True):
             input_fp = pathlib.Path(input_fp_str)
+            if input_fp.is_dir():
+                continue
+            # Ignore the Umccrise work directory
+            # NOTE: this seems to be safe but not exhaustively tested
+            glob_path_str = input_fp_str.replace(str(dirpath), '')
+            glob_path = pathlib.Path(glob_path_str)
+            glob_path_dirnames = glob_path.parent.parts
+            if 'work' in set(glob_path_dirnames):
+                continue
             sample_name = input_fp.parts[-3]
             # Create input file and record
             input_file = inputs.InputFile(
