@@ -107,7 +107,10 @@ get_smlv_summary_data <- function(d.files) {
     dplyr::bind_rows() %>%
     dplyr::left_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
     dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>%
-    dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_round), function(v.col) { format(round(v.col, 4), nsmall=4) })) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(v.smlv_summary_table_columns_round),
+      function(v.col) { format(round(v.col, 4), nsmall=4, scientific=FALSE) })
+    ) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_comma), scales::comma))
   return(d.smlv_table)
 }
@@ -117,16 +120,20 @@ render_smlv_summary_table <- function(d.smlv_summary_data) {
   d.smlv_summary_data %>%
     DT::datatable(
       rownames=FALSE,
-      filter=list(position='top', clear=FALSE, plain=TRUE),
-      extensions='Scroller',
-      options=list(scroller=TRUE, scrollX=TRUE, scrollY=n.table_height)
+      filter=v.table_filter_options,
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(
+        scroller=TRUE,
+        scrollX=TRUE,
+        scrollY=n.table_height
+      )
     ) %>%
     DT::formatStyle(
       v.smlv_summary_table_columns_round,
-      background=DT::styleColorBar(as.numeric(unlist(d.smlv_summary_data[ ,v.smlv_summary_table_columns_round])), 'lightgreen'),
-      backgroundSize='90% 90%',
-      backgroundRepeat='no-repeat',
-      backgroundPosition='center'
+      background=DT::styleColorBar(
+        v.table_cell_fill_range,
+        v.table_cell_fill_colour_green
+      )
     )
 }
 ```
@@ -280,9 +287,13 @@ smlv_pcgr_render_table <- function(d.smlv_pcgr_data_subset) {
     DT::datatable(
       rownames=FALSE,
       caption='PCGR FP and FN variants for all samples.',
-      filter=list(position='top',clear=FALSE, plain=TRUE),
-      extensions=c('Scroller', 'Buttons'),
-      options=list(scroller=TRUE, scrollX=TRUE, scrollY=n.table_height, dom='Bfrtip', buttons=c('csv'))
+      filter=v.table_filter_options,
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(
+        scroller=TRUE,
+        scrollX=TRUE,
+        scrollY=n.table_height
+      )
     )
 }
 ```
@@ -333,10 +344,6 @@ if (nrow(d.smlv_pcgr_data_subset) > 0) {
 render_warning_files(d.smlv_pcgr_files_missing)
 ```
 
-```{r smlv_pcgr_variants_warning_display, eval=l.undisplayed_smlv_pcgr_variants, results='asis'}
-render_warning_variants(d.smlv_pcgr_data_displayed)
-```
-
 ### Variants counts by sample
 ```{r smlv_pcgr_table_sample_name}
 smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'Sample name')
@@ -348,6 +355,10 @@ smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'SAGE hotspot')
 ```
 
 ### Variants
+```{r smlv_pcgr_variants_warning_display, eval=l.undisplayed_smlv_pcgr_variants, results='asis'}
+render_warning_variants(d.smlv_pcgr_data_displayed)
+```
+
 ```{r smlv_pcgr_table_all_variants}
 smlv_pcgr_render_table(d.smlv_pcgr_data_subset)
 ```

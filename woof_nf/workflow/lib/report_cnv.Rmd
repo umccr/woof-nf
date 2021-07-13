@@ -63,14 +63,13 @@ get_cnv_summary_data <- function(d.files, v.umccr_genes) {
 }
 
 render_cnv_summary_table <- function(d.cnv_summary_data_subset) {
-  n.table_height <- min(31 * nrow(d.cnv_summary_data_subset), 600)
+  n.table_height <- min(38.75 * nrow(d.cnv_summary_data_subset), 600)
   d.cnv_summary_data_subset %>%
     dplyr::mutate_if(is.character, as.factor) %>%
     DT::datatable(
       rownames=FALSE,
-      class='cell-border display compact',
-      caption=paste0('Differences in Copy Number (threshold: 0.1)'),
-      filter=list(position='top', clear=FALSE, plain=FALSE),
+      caption=paste0('Copy number bound difference threshold: 0.1'),
+      filter=v.table_filter_options,
       extensions=c('Scroller', 'KeyTable'),
       options=list(
         scroller=TRUE,
@@ -80,7 +79,10 @@ render_cnv_summary_table <- function(d.cnv_summary_data_subset) {
     ) %>%
     DT::formatStyle(
       v.cnv_table_columns_colour,
-      backgroundColor=DT::styleEqual(c('TRUE'), c('#FFCCCB'))
+      backgroundColor=DT::styleEqual(
+        'TRUE',
+        v.table_cell_fill_colour_red
+      )
     )
 }
 ```

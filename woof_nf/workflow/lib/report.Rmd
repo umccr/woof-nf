@@ -48,6 +48,15 @@ library(DT)
 library(tidyverse)
 ```
 
+```{r global_formatting}
+v.table_cell_fill_colour_green <- '#bce3ca'
+v.table_cell_fill_colour_yellow <- '#f2cc8f'
+v.table_cell_fill_colour_red <- '#ffcbc6'
+v.table_cell_fill_range <- c(0.97, 1)
+
+v.table_filter_options <- list(position='top', clear=FALSE, plain=FALSE)
+```
+
 ```{r shared_functions}
 # Get variant counts for subsetting
 get_variant_display_counts <- function(d.variant_counts, n.total) {
