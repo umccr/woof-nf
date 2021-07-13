@@ -54,7 +54,7 @@ if [[ "$(uname)" == "Darwin" ]]; then
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
   ln -s ${CONDA_PREFIX}/lib/libwebp.so.7 ${CONDA_PREFIX}/lib/libwebp.so.6
 else
-  echo "error: system appears unsupported, got $(uname) but expected Linux or Darwn" >&2
+  echo "error: system appears to be unsupported, got $(uname) but expected Linux or Darwn" >&2
 fi
 ```
 
