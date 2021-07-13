@@ -9,7 +9,7 @@ REGION = 'ap-southeast-2'
 BATCH_QUEUE = 'nextflow-job-queue'
 ECR_BASE_URI = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
 ECR_REPO = 'woof-nf'
-ECR_IMAGE_TAG = '0.1.0'
+ECR_IMAGE_TAG = '0.1.1'
 
 
 def check_config() -> None:
