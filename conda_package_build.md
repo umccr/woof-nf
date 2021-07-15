@@ -1,5 +1,5 @@
 # Conda package build instructions
-## Build the package
+## Build
 ```bash
 # pdiakumis channel provides r-rock, r-woofr
 conda build \
@@ -11,7 +11,6 @@ conda build \
 ```
 
 ## Upload
-### Anaconda repository
 ```bash
 # Find built package filepath from the conda build command above and set
 PACKAGE_FP=/usr/local/Caskroom/miniconda/base/conda-bld/noarch/woof-nf-0.1.1-py_0.tar.bz2
