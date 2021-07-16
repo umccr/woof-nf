@@ -23,7 +23,7 @@ input_files = inputs_fp
   .readLines()[1..-1]
   .collect { it.split('\t') }
 
-// Discover inputs
+// Collect inputs into appropriate channels
 (ch_cnv, ch_smlv, ch_sv) = process_inputs(input_files)
 
 workflow {

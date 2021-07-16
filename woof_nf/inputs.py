@@ -150,6 +150,8 @@ def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
             raise NotImplemented
         elif source == 'plain':
             raise NotImplemented
+        else:
+            assert False
         if source not in input_collection:
             input_collection[source] = list()
         input_collection[source].extend(directory_inputs)

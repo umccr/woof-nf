@@ -9,7 +9,6 @@ from . import information
 from . import inputs
 from . import log
 from . import report
-from . import umccrise
 from . import workflow
 
 
