@@ -1,12 +1,14 @@
 import collections
+import glob
 import pathlib
 import sys
 from typing import Dict, List, Tuple
 
 
+from . import inputs_bcbio as bcbio
+from . import inputs_umccrise as umccrise
 from . import log
 from . import table
-from . import umccrise
 
 
 class InputFile:
@@ -96,20 +98,16 @@ def collect(dir_one: List[pathlib.Path], dir_two: List[pathlib.Path]) -> Dict:
     inputs_two = discover_run_files(dir_two, run='two')
     # Match files from the two runs
     file_data = match_inputs(inputs_one, inputs_two)
-    # Ensure we have some files to match
-    for source, files in file_data.items():
-        if files.samples_matched:
-            break
-    else:
-        log.render(log.ftext('error: no samples matched', c='red'))
-        sys.exit(1)
     # Create and render tables displaying results
     for source_name, source_data in file_data.items():
         if source_name == 'umccrise':
+            table_title = 'UMCCRISE'
             columns = list(umccrise.FILE_TYPES.keys())
             columns_display_name = [umccrise.COLUMN_NAME_MAPPING[n] for n in columns]
         elif source_name == 'bcbio':
-            raise NotImplemented
+            table_title = 'bcbio-nextgen'
+            columns = list(bcbio.FILE_TYPES.keys())
+            columns_display_name = [bcbio.COLUMN_NAME_MAPPING[n] for n in columns]
         elif source_name == 'dragen':
             raise NotImplemented
         elif source_name == 'rnasum':
@@ -120,10 +118,17 @@ def collect(dir_one: List[pathlib.Path], dir_two: List[pathlib.Path]) -> Dict:
         # Print log message and table
         samples_matched_n = len(source_data.samples_matched)
         samples_all_n = len(source_data.samples_matched) + len(source_data.samples_unmatched)
-        log.render(log.ftext('UMCCRISE:', f='bold'))
-        log.render(f'  Matched {samples_matched_n} of {samples_all_n} samples:')
+        log.render(log.ftext(f'{table_title}:', f='bold'), end=' ')
+        log.render(f'matched {samples_matched_n} of {samples_all_n} samples:')
         table.render_table(rows)
         log.render_newline()
+    # Ensure we have some files to match
+    for source, files in file_data.items():
+        if files.samples_matched:
+            break
+    else:
+        log.render(log.ftext('error: no samples matched', c='red'))
+        sys.exit(1)
     return file_data
 
 
@@ -134,16 +139,35 @@ def log_input_directories(dirpaths: List[pathlib.Path], n: str) -> None:
 
 
 def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
-    input_collection: Dict[str, List] = dict()
+    # Find input directories and input types
+    detected_dirpaths = list()
     for dirpath in dirpaths:
-        # Discover files for each input directory
-        # NOTE: this will be a branch point for process different input directory types
-        # NOTE: `source` will be autodetected from input structure
-        source = 'umccrise'
+        # NOTE: we may want to consider limiting recursion into deep directories
+        directories = [dirpath]
+        for dirpath in directories:
+            if not (dirpath.is_dir()):
+                continue
+            # Detect directory input type, if any
+            source = None
+            input_types = [umccrise, bcbio]
+            for input_type in input_types:
+                if input_type.is_dir_type(dirpath):
+                    source = input_type.SOURCE
+                    break
+            # If directory type detected halt recursion, otherwise add dir contents to iterate
+            if source is None:
+                directories.extend(dirpath.iterdir())
+            else:
+                detected_dirpaths.append((source, dirpath))
+    # Discover files for each input directory
+    input_collection: Dict[str, List] = dict()
+    for source, dirpath in detected_dirpaths:
         if source == 'umccrise':
-            directory_inputs = umccrise.process_input_directory(dirpath, run=run)
+            inputs_list = umccrise.INPUTS_LIST
+            file_types = umccrise.FILE_TYPES
         elif source == 'bcbio':
-            raise NotImplemented
+            inputs_list = bcbio.INPUTS_LIST
+            file_types = bcbio.FILE_TYPES
         elif source == 'dragen':
             raise NotImplemented
         elif source == 'rnasum':
@@ -152,16 +176,48 @@ def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
             raise NotImplemented
         else:
             assert False
+        directory_inputs = process_input_directory(
+            dirpath,
+            run,
+            inputs_list,
+            file_types,
+            source
+        )
         if source not in input_collection:
             input_collection[source] = list()
         input_collection[source].extend(directory_inputs)
     return input_collection
 
 
+def process_input_directory(
+    dirpath: pathlib.Path,
+    run: str,
+    inputs_list,
+    file_types,
+    source
+) -> List:
+    directory_inputs = list()
+    for input_name, glob_parts in inputs_list.items():
+        # Construct full glob expression, iterate matches
+        glob_expr = str(dirpath / '/'.join(glob_parts))
+        for input_fp in glob.glob(glob_expr, recursive=True):
+            # Create input file and record
+            input_file = InputFile(
+                dirpath.name,
+                run,
+                input_fp,
+                input_name,
+                file_types[input_name],
+                source
+            )
+            directory_inputs.append(input_file)
+    return directory_inputs
+
+
 def match_inputs(inputs_one: Dict, inputs_two: Dict) -> Dict[str, SourceFiles]:
     matched = dict()
     sources = set(inputs_one) | set(inputs_two)
-    for source in sources:
+    for source in sorted(sources):
         source_one = dict() if source not in inputs_one else inputs_one[source]
         source_two = dict() if source not in inputs_two else inputs_two[source]
         matched[source] = perform_matching(source_one, source_two)
@@ -290,23 +346,19 @@ def prepare_rows(source_data: SourceFiles, columns: List, file_columns_display: 
 
 
 def write(input_data: Dict, output_fp: pathlib.Path) -> pathlib.Path:
-    # NOTE: only umccrise currently implemented
-    sources_unimpl = {'umccrise'} ^ set(input_data)
-    if sources_unimpl:
-        print('error: got unimplemented comparison types:', file=sys.stderr)
-        print(*sources_unimpl, sep='\n', file=sys.stderr)
-        sys.exit(1)
-    # Write file
     header_tokens = ('sample_name', 'file_type', 'file_source', 'run_number', 'filepath')
-    inputs_fp = pathlib.Path(output_fp)
-    source_data = input_data['umccrise']
-    file_set_gen = (f for sample_files in source_data.file_list.values() for f in sample_files.values())
-    with inputs_fp.open('w') as fh:
+    with output_fp.open('w') as fh:
         print(*header_tokens, sep='\t', file=fh)
-        for fs in file_set_gen:
-            if not fs .is_matched:
-                continue
-            for input_file in (fs.file_one, fs.file_two):
+        for source_files in input_data.values():
+            # Unpack into flat list of intput files. Sheesh, need to refactor...
+            input_files = list()
+            for file_type_pair in source_files.file_list.values():
+                for file_pair in file_type_pair.values():
+                    if not file_pair.is_matched:
+                        continue
+                    input_files.extend((file_pair.file_one, file_pair.file_two))
+            # Write input file info to disk
+            for input_file in input_files:
                 print(
                     input_file.sample_name,
                     input_file.inputtype,
@@ -316,4 +368,4 @@ def write(input_data: Dict, output_fp: pathlib.Path) -> pathlib.Path:
                     sep='\t',
                     file=fh
                 )
-    return inputs_fp
+    return output_fp
