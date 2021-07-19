@@ -59,10 +59,10 @@ def collect() -> argparse.Namespace:
 
 def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     log.task_msg_title('Checking arguments')
-    log.task_msg_body('Not yet fully implemented - hold on to your seats!\n')
-
-    # Check valid filepaths for output_dir and log_fp
-
+    log.render_newline()
+    # Cast inputs to pathlib.Path or s3path.S3Path
+    args.run_dir_one = process_input_directories(args.run_dir_one)
+    args.run_dir_two = process_input_directories(args.run_dir_two)
     # Create output directory if it does not already exist
     if not args.output_dir.exists():
         args.output_dir.mkdir(parents=True, exist_ok=True)
