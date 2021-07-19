@@ -1,6 +1,7 @@
 import collections
 import glob
 import pathlib
+import re
 import sys
 from typing import Dict, List, Tuple
 
@@ -9,6 +10,14 @@ from . import inputs_bcbio as bcbio
 from . import inputs_umccrise as umccrise
 from . import log
 from . import table
+
+
+IGNORE_PATHS_RE = [
+    re.compile('^.+/umccrised/log(?:/.*)?$'),
+    re.compile('^.+/umccrised/work(?:/.*)?$'),
+    re.compile('^.+/umccrised/benchmarks(?:/.*)?$'),
+    re.compile('^.+/umccrised/.snakemake(?:/.*)?$'),
+]
 
 
 class InputFile:
@@ -155,7 +164,10 @@ def find_input_directories(dirpaths):
         # NOTE: we may want to consider limiting recursion into deep directories
         directories = [dirpath]
         for dirpath in directories:
+            # Skip non-directories and ignorable paths
             if not (dirpath.is_dir()):
+                continue
+            if any(path_re.match(str(dirpath)) for path_re in IGNORE_PATHS_RE):
                 continue
             # Detect directory input type, if any
             source = None
@@ -166,7 +178,8 @@ def find_input_directories(dirpaths):
                     break
             # If directory type detected halt recursion, otherwise add dir contents to iterate
             if source is None:
-                directories.extend(dirpath.iterdir())
+                iterdirs = list(dirpath.iterdir())
+                directories.extend(iterdirs)
             else:
                 detected_dirpaths.append((source, dirpath))
     return detected_dirpaths
@@ -183,7 +196,7 @@ def process_input_directory(
     for input_name, glob_parts in inputs_list.items():
         # Construct full glob expression, iterate matches
         glob_expr = str(dirpath / '/'.join(glob_parts))
-        for input_fp in glob.glob(glob_expr, recursive=True):
+        for input_fp in dirpath.glob('/'.join(glob_parts)):
             # Create input file and record
             input_file = InputFile(
                 dirpath.name,

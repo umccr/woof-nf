@@ -1,7 +1,7 @@
 import math
+import os
 import pathlib
 import re
-import os
 import shutil
 import subprocess
 import sys
@@ -25,6 +25,24 @@ AWS_COMPLETION = [
     'CPU hours   :',
     'Succeeded   :'
 ]
+
+
+class RenderInfo:
+
+    def __init__(self):
+        self.title = str()
+        self.executor = str()
+        self.processes = dict()
+        self.errors = list()
+        # Line size and display count
+        self.line_sizes = list()
+        self.lines_displayed = 0
+        # AWS file staging
+        self.files_uploading = list()
+        self.files_downloading = list()
+        # We prevent re-rendering in case of multiple newlines with this flag
+        self.newline_previous = False
+        self.splash = True
 
 
 def create_configuration(inputs_fp: pathlib.Path, output_dir: pathlib.Path, docker: bool, executor: str) -> pathlib.Path:
@@ -98,39 +116,30 @@ def run(inputs_fp: pathlib.Path, output_dir: pathlib.Path, resume: bool, docker:
 
 
 def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
-    # NOTE: using -ansi-log false could simplify
-    # Line store
-    title = str()
-    executor = str()
-    processes = dict()
-    errors = list()
-    # Line size and display count
-    line_sizes: List[int] = list()
-    lines_displayed = 0
-    # AWS file staging
-    files_uploading = list()
-    # We prevent re-rendering in case of multiple newlines with this flag
-    newline_previous = False
-    splash = True
-    # Process lines
     # NOTE: type checking requires p.stdout not to be None
     if not p.stdout:
         assert False
+    # Process lines
+    ri = RenderInfo()
     for line in p.stdout:
         # Allow re-rendering if current line and last are not newlines
-        if line != '\n' and newline_previous:
-            newline_previous = False
+        if line != '\n' and ri.newline_previous:
+            ri.newline_previous = False
         # Begin main line handling
         if line.startswith('N E X T F L O W'):
-            title = f'    {line}'
+            ri.title = f'    {line}'
         elif line.startswith('Launching') or line.startswith('executor >'):
-            executor = f'    {line}'
+            ri.executor = f'    {line}'
         elif process_match := PROCESS_LINE_RE.match(line):
             process_name = process_match.group(1)
-            processes[process_name] = f'    {line}'
+            ri.processes[process_name] = f'    {line}'
         elif aws_staging_match := STAGING_LINE_RE.match(line):
+            # S3:// files always downloaded; local files always uploaded
             staging_file = aws_staging_match.group(1)
-            files_uploading.append(staging_file)
+            if staging_file.startswith('s3://'):
+                ri.files_downloading.append(staging_file)
+            else:
+                ri.files_uploading.append(staging_file)
         elif bin_upload_match := BIN_UPLOAD_LINE_RE.match(line):
             # Not considered important
             pass
@@ -144,39 +153,32 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
             # AWS nf plugin produces lines containing only spaces, ignore
             pass
         else:
-            errors.append(f'    {line}')
+            ri.errors.append(f'    {line}')
         # Render when:
         #   - end of 'process' block (general case)
         #   - first pass to allow quick header/splash display
-        if (line == '\n' and not newline_previous) or splash:
+        if (line == '\n' and not ri.newline_previous) or ri.splash:
             term_size = shutil.get_terminal_size()
-            lines_displayed = sum(get_actual_lines(line_sizes, term_size))
-            line_sizes = render_output(
-                title,
-                executor,
-                processes,
-                files_uploading,
-                errors,
-                lines_displayed,
-                term_size
-            )
-            # Clear files uploading and set previous newline variable
-            files_uploading = list()
-            newline_previous = True
+            ri.lines_displayed = sum(get_actual_lines(ri.line_sizes, term_size))
+            ri.line_sizes = render_output(ri, term_size)
+            # Clear files staging info and set previous newline variable
+            ri.files_uploading = list()
+            ri.files_downloading = list()
+            ri.newline_previous = True
             # Disable splash if we have both title and executor
-            splash = not (title and executor)
+            ri.splash = not (ri.title and ri.executor)
     # Clear output so we can print full and final text
     term_size = shutil.get_terminal_size()
-    clear_terminal(term_size, lines_displayed)
+    clear_terminal(term_size, ri.lines_displayed)
     # Get final output
     status = [
-        title,
-        executor,
-        *processes.values()
+        ri.title,
+        ri.executor,
+        *ri.processes.values()
     ]
     status_str = ''.join(status)
     log.render(status_str, sep='')
-    return errors
+    return ri.errors
 
 
 def get_actual_lines(line_sizes: List[int], term_size: os.terminal_size) -> List[int]:
@@ -195,29 +197,28 @@ def clear_terminal(term_size: os.terminal_size, lines_displayed: int) -> None:
         sys.stdout.write('\u001b[0J')
 
 
-def render_output(
-    title: str,
-    executor: str,
-    processes: Dict[str, str],
-    files_uploading: List[str],
-    errors: List[str],
-    lines_displayed: int,
-    term_size: os.terminal_size
-) -> List[int]:
+def render_output(ri, term_size: os.terminal_size) -> List[int]:
     # Clear terminal
-    clear_terminal(term_size, lines_displayed)
+    clear_terminal(term_size, ri.lines_displayed)
     # Prepare new lines
     lines_all: List[str] = list()
-    lines_all.append(title)
-    lines_all.append(executor)
-    lines_all.extend(processes.values())
-    if files_uploading:
+    lines_all.append(ri.title)
+    lines_all.append(ri.executor)
+    lines_all.extend(ri.processes.values())
+    # Staging blocked; nested if statements to pad block with newlines
+    if ri.files_uploading or ri.files_downloading:
         lines_all.append('\n')
-        files_n = len(files_uploading)
-        plurality = 'file' if files_n == 1 else 'files'
-        lines_all.append(f'Currently uploading {len(files_uploading)} {plurality} to S3\n')
+        if ri.files_uploading:
+            files_n = len(ri.files_uploading)
+            plurality = 'file' if files_n == 1 else 'files'
+            lines_all.append(f'Currently uploading {len(ri.files_uploading)} {plurality} to S3\n')
+        if ri.files_downloading:
+            files_n = len(ri.files_uploading)
+            plurality = 'file' if files_n == 1 else 'files'
+            lines_all.append(f'Currently downloading {len(ri.files_downloading)} {plurality} from S3\n')
+        lines_all.append('\n')
     lines_all.append('\n')
-    if errors:
+    if ri.errors:
         lines_all.append(
             'Errors encountered - check .nextflow.log for further information!'
             ' Further details will be printed at conclusion of workflow run.\n'
