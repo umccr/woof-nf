@@ -29,7 +29,7 @@ AWS Batch execution. While possible to run `woof-nf` partially or entirely withi
 container locally, doing so is not fully supported.
 
 ### Conda
-Create Conda environment and install `woof-nf`:
+Simply create a new Conda environment and install `woof-nf`:
 ```bash
 conda create \
   --prefix $(pwd -P)/conda_env/ \
@@ -73,7 +73,7 @@ Additionally, you will also need to install `aws-cli`. This can be obtained thro
 [installed manually](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
 
 ## Usage
-Running locally:
+Executing and running jobs locally:
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
@@ -81,11 +81,21 @@ Running locally:
   --output_dir output/
 ```
 
-Running on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
+Executing locally, running jobs on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
   --run_dir_two data/second_set/ \
+  --output_dir output/ \
+  --executor aws \
+  --s3_bucket s3://bucket-name/object-key/
+```
+
+Executing locally, running jobs on AWS with S3 inputs (inputs staged directly from S3 to appropriate AWS instance during job execution):
+```bash
+./woof_nf-runner.py \
+  --run_dir_one s3://data/first_set/ \
+  --run_dir_two s3://data/second_set/ \
   --output_dir output/ \
   --executor aws \
   --s3_bucket s3://bucket-name/object-key/
@@ -137,14 +147,14 @@ output/COLO829_1__Colo829/
 ```
 
 ## Requirements
-Mandatory requirements:
+General:
 * Python ≥3.6
 * BCFtools
 * Circos
 * Nextflow
 * R
 
-Mandatory R packages:
+R packages:
 * bedr
 * DT
 * glue
@@ -153,21 +163,23 @@ Mandatory R packages:
 * tidyverse
 * [woofr](https://github.com/pdiakumis/woofr) (currently only required for external data)
 
+Python packages:
+* s3path
+* boto3
+
 Optional requirements:
 * aws-cli (AWS execution only)
 * Docker (local Docker execution only)
 
 ## Known Issues
 * report is required to process/compute data; all should be pre-computed only requiring render
-* AWS execution can take s3:// URIs but this isn't currently allowable through the wrapper script
+* iterative directory discovery using `s3path` is slow - alternative: first obtain file list to operate on
 * resume is not currently possible when running entirely within Docker
     - NF work directory option needs to be exposed and set to an non-ephemeral location
 * CLI argument checking is incomplete
 * not all applicable columns are formatted with commas in report
-* report is generated on execution machine i.e. never on AWS
-* data subsetting for report is naive; needs improvement
+* report is generated on executing machine i.e. never on AWS
 * CNV diff coord data is not currently displayed in report
-* tables are sometimes display with inconsistent styling/search box dimensions
 
 ## License
 Software and code in this repository is under [GNU General Public License
