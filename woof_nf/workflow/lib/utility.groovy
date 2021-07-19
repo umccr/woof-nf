@@ -30,9 +30,9 @@ def create_attributes(
 
 def process_inputs(input_files) {
   // Collate input files
-  inputs_cnv = []
-  inputs_smlv = []
-  inputs_sv = []
+  def inputs_cnv = []
+  def inputs_smlv = []
+  def inputs_sv = []
   input_files.each { d ->
     // Unpack and cast here; error raises while trying to unpack in closure params
     (sample_name, variant_type, file_source, run_number, filepath) = d
@@ -60,7 +60,7 @@ def process_inputs(input_files) {
     }
   }
   // Check for existing VCF indices
-  inputs_smlv_with_index = locate_vcf_indices(inputs_smlv)
+  def inputs_smlv_with_index = locate_vcf_indices(inputs_smlv)
   // Create and return channel of inputs
   return [
     Channel.fromList(inputs_cnv),
@@ -72,7 +72,7 @@ def process_inputs(input_files) {
 
 def locate_vcf_indices(inputs) {
   inputs.eachWithIndex { v, i ->
-    file = v[1]
+    def file = v[1]
     if (file.toString().endsWith('.tsv')) {
       return
     }
@@ -81,7 +81,7 @@ def locate_vcf_indices(inputs) {
       inputs[i][0].indexed = true
       inputs[i] << vcf_index
     } else {
-      inputs[i][2].indexed = false
+      inputs[i][0].indexed = false
       // NOTE: using Path instance to avoid NF restrictions on path() process inputs
       inputs[i] << Paths.get('NO_FILE')
     }
@@ -124,9 +124,6 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
     .groupTuple()
     .map { group_key, attributes_list, vcfs, vcf_indices ->
       // Get index of first and second file
-      // NOTE: it is *critical* that the `def` keyword is used to declare variables here. For some
-      // reason that isn't clear to me when a function is called twice and executes near-simulatenously
-      // in NF and involves calling `.map` on a channel, variables leak between `.map` iterations.
       def index_one = null
       def index_two = null
       (index_one, index_two) = get_file_order(attributes_list)
@@ -156,9 +153,6 @@ def pair_files(ch_files) {
     .groupTuple()
     .map { group_key, attributes_list, files ->
       // Get index of first and second file
-      // NOTE: it is *critical* that the `def` keyword is used to declare variables here. For some
-      // reason that isn't clear to me when a function is called twice and executes near-simulatenously
-      // in NF and involves calling `.map` on a channel, variables leak between `.map` iterations.
       def index_one = null
       def index_two = null
       (index_one, index_two) = get_file_order(attributes_list)
