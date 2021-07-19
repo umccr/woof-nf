@@ -76,7 +76,7 @@ def locate_vcf_indices(inputs) {
     if (file.toString().endsWith('.tsv')) {
       return
     }
-    vcf_index = file + '.tbi'
+    def vcf_index = file + '.tbi'
     if (vcf_index.exists()) {
       inputs[i][0].indexed = true
       inputs[i] << vcf_index
