@@ -76,8 +76,10 @@ def locate_vcf_indices(inputs) {
     if (file.toString().endsWith('.tsv')) {
       return
     }
+    // NOTE (20210729): calling exists() on an S3Path results in an access denied response from the
+    // AWS api, so we avoid doing so here and opt to re-create VCF indices even if they exist on S3
     def vcf_index = file + '.tbi'
-    if (vcf_index.exists()) {
+    if (vcf_index.getClass() == java.nio.file.Path && vcf_index.exists()) {
       inputs[i][0].indexed = true
       inputs[i] << vcf_index
     } else {
