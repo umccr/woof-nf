@@ -131,11 +131,9 @@ def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
     input_collection: Dict[str, List] = dict()
     for source, dirpath in detected_dirpaths:
         if source == 'umccrise':
-            inputs_list = umccrise.INPUTS_LIST
-            file_types = umccrise.FILE_TYPES
+            input_module = umccrise
         elif source == 'bcbio':
-            inputs_list = bcbio.INPUTS_LIST
-            file_types = bcbio.FILE_TYPES
+            input_module = bcbio
         elif source == 'dragen':
             raise NotImplemented
         elif source == 'rnasum':
@@ -147,8 +145,7 @@ def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
         directory_inputs = process_input_directory(
             dirpath,
             run,
-            inputs_list,
-            file_types,
+            input_module,
             source
         )
         if source not in input_collection:
@@ -157,13 +154,13 @@ def discover_run_files(dirpaths: List[pathlib.Path], run: str) -> Dict:
     return input_collection
 
 
-def find_input_directories(dirpaths):
+def find_input_directories(input_dirpaths):
     # Find input directories and input types
     detected_dirpaths = list()
-    for dirpath in dirpaths:
+    for input_dirpath in input_dirpaths:
         # NOTE: we may want to consider limiting recursion into deep directories
-        directories = [dirpath]
-        for dirpath in directories:
+        dirpaths = [input_dirpath]
+        for dirpath in dirpaths:
             # Skip non-directories and ignorable paths
             if not (dirpath.is_dir()):
                 continue
@@ -179,7 +176,7 @@ def find_input_directories(dirpaths):
             # If directory type detected halt recursion, otherwise add dir contents to iterate
             if source is None:
                 iterdirs = list(dirpath.iterdir())
-                directories.extend(iterdirs)
+                dirpaths.extend(iterdirs)
             else:
                 detected_dirpaths.append((source, dirpath))
     return detected_dirpaths
@@ -188,22 +185,22 @@ def find_input_directories(dirpaths):
 def process_input_directory(
     dirpath: pathlib.Path,
     run: str,
-    inputs_list,
-    file_types,
+    input_module,
     source
 ) -> List:
     directory_inputs = list()
-    for input_name, glob_parts in inputs_list.items():
+    for input_name, glob_parts in input_module.INPUTS_LIST.items():
         # Construct full glob expression, iterate matches
-        glob_expr = str(dirpath / '/'.join(glob_parts))
         for input_fp in dirpath.glob('/'.join(glob_parts)):
+            # Get sample name
+            sample_name = input_module.get_sample_name(dirpath)
             # Create input file and record
             input_file = InputFile(
-                dirpath.name,
+                sample_name,
                 run,
                 input_fp,
                 input_name,
-                file_types[input_name],
+                input_module.FILE_TYPES[input_name],
                 source
             )
             directory_inputs.append(input_file)

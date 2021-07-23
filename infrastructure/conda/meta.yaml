@@ -30,7 +30,6 @@ requirements:
     - r-rock
     - r-tidyverse
     - r-woofr
-    - s3path
 
 test:
   imports:

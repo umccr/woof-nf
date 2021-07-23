@@ -51,5 +51,8 @@ def is_dir_type(dirpath: pathlib.Path) -> bool:
     for glob_pattern, value in DIRECTORY_FINGERPRINT.items():
         if list(dirpath.glob(glob_pattern)):
             score += value
-    # Must pass threshold and not be in umccrise work directory
-    return score >= FINGREPRINT_SCORE_THRESHOLD and dirpath.parent.name != 'work'
+    return score >= FINGREPRINT_SCORE_THRESHOLD
+
+
+def get_sample_name(dirpath):
+    return dirpath.name

@@ -35,3 +35,8 @@ def is_dir_type(dirpath: pathlib.Path) -> bool:
         if list(dirpath.glob(glob_pattern)):
             score += value
     return score >= FINGREPRINT_SCORE_THRESHOLD
+
+
+def get_sample_name(dirpath):
+    sample_name_re = re.compile(r'^[\d_-]+T\d{4}_(.+?)(?:-merged)?$')
+    return sample_name_re.match(dirpath.name).group(1)
