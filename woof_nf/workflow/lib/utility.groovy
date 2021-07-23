@@ -40,7 +40,16 @@ def process_inputs(input_files) {
     // Restrict some values
     assert run_number in ['one', 'two']
     assert variant_type in ['copy_number_variants', 'small_variants', 'structural_variants']
-    assert file_source in ['cpsr', 'pcgr', 'manta', 'purple']
+    assert file_source in [
+      'cpsr',
+      'pcgr',
+      'manta',
+      'purple',
+      'ensemble',
+      'gatk',
+      'strelka2',
+      'vardict'
+    ]
     // Set attributes
     attributes = create_attributes(
      sample_name,   // sample_name

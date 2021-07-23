@@ -1,19 +1,29 @@
 import glob
 import pathlib
+import re
 
 
 SOURCE = 'bcbio'
 
 INPUTS_LIST = {
+    'ensemble': ['*-germline-ensemble-annotated.vcf.gz'],
+    'gatk': ['*-germline-gatk-haplotype-annotated.vcf.gz'],
     'strelka2': ['*-germline-strelka2-annotated.vcf.gz'],
+    'vardict': ['*-germline-vardict-annotated.vcf.gz'],
 }
 
 FILE_TYPES = {
+    'ensemble': 'small_variants',
+    'gatk': 'small_variants',
     'strelka2': 'small_variants',
+    'vardict': 'small_variants',
 }
 
 COLUMN_NAME_MAPPING = {
+    'ensemble': 'Ensemble',
+    'gatk': 'GATK',
     'strelka2': 'Strelka2',
+    'vardict': 'VarDict',
 }
 
 FINGREPRINT_SCORE_THRESHOLD = 30
