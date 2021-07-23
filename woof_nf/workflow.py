@@ -205,7 +205,7 @@ def render_output(ri, term_size: os.terminal_size) -> List[int]:
     lines_all.append(ri.title)
     lines_all.append(ri.executor)
     lines_all.extend(ri.processes.values())
-    # Staging blocked; nested if statements to pad block with newlines
+    # Staging block; nested if statements to pad block with newlines
     if ri.files_uploading or ri.files_downloading:
         lines_all.append('\n')
         if ri.files_uploading:
