@@ -73,7 +73,7 @@ Additionally, you will also need to install `aws-cli`. This can be obtained thro
 [installed manually](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
 
 ## Usage
-Executing and running jobs locally:
+Execute and run jobs locally:
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
@@ -81,7 +81,7 @@ Executing and running jobs locally:
   --output_dir output/
 ```
 
-Executing locally, running jobs on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
+Execute locally, run jobs on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
@@ -91,14 +91,14 @@ Executing locally, running jobs on AWS (`--s3_bucket` specifies bucket and direc
   --s3_bucket s3://bucket-name/object-key/
 ```
 
-Executing locally, running jobs on AWS with S3 inputs (inputs staged directly from S3 to appropriate AWS instance during job execution):
+Execute locally, run jobs on AWS with S3 inputs (inputs staged directly from S3 to appropriate AWS instance during job execution):
 ```bash
 ./woof_nf-runner.py \
-  --run_dir_one s3://data/first_set/ \
-  --run_dir_two s3://data/second_set/ \
+  --run_dir_one s3://bucket-name/first_set/ \
+  --run_dir_two s3://bucket-name/second_set/ \
   --output_dir output/ \
   --executor aws \
-  --s3_bucket s3://bucket-name/object-key/
+  --s3_bucket s3://bucket-name/temp/
 ```
 
 Note that AWS configuration is currently hard coded in `woof_nf/aws.py`.
@@ -164,7 +164,6 @@ R packages:
 * [woofr](https://github.com/pdiakumis/woofr) (currently only required for external data)
 
 Python packages:
-* s3path
 * boto3
 
 Optional requirements:
