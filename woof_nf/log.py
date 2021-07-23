@@ -98,6 +98,9 @@ def render(
         LOG_BUFFER.append((text, title, kargs))
     else:
         text_log = ANSI_ESCAPE.sub('', text)
+        # Remove flush if it was previously provided; forcefully enable
+        if 'flush' in kargs:
+            del kargs['flush']
         print(text_log, **kargs, file=LOG_FH, flush=True)
         if title:
             print('-' * len(text_log), file=LOG_FH, flush=True)
