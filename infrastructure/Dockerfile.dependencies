@@ -11,13 +11,11 @@ ARG TZ='Etc/UTC'
 # Install several packages through system package manager
 # NOTE:
 #   ca-certificates: required for https/curl
-#   bsdmainutils: provides hexdump (used in nf process module_smlv_count)
 #   libx11-6: required for rendering report images
 #   tzdata: required for readr
 RUN \
   apt-get update && \
   apt-get install --yes --no-install-recommends \
-    bsdmainutils \
     ca-certificates  \
     curl \
     libx11-6 \
