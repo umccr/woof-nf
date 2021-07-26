@@ -35,12 +35,14 @@ def entry():
 
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
-    inputs_fp = inputs.write(input_data, args.output_dir / 'input_files.tsv')
+    inputs_fp = inputs.write(input_data, args.output_dir / 'nextflow/input_files.tsv')
 
     # Execute pipeline and render report
     workflow.run(
         inputs_fp,
         args.output_dir,
+        args.nextflow_dir,
+        args.run_timestamp,
         args.resume,
         args.docker,
         args.executor,

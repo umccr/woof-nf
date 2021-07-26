@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import multiprocessing
 import pathlib
 import re
@@ -63,12 +64,17 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     # Cast inputs to pathlib.Path or as s3path.VirtualPath
     args.run_dir_one = process_input_directories(args.run_dir_one, run='one')
     args.run_dir_two = process_input_directories(args.run_dir_two, run='two')
-    # Create output directory if it does not already exist
+    # Create output directory if it does not already exist, and set and create nextflow directory
+    # NOTE: while implementing S3 output, we'll factor as function with more logic
     if not args.output_dir.exists():
         args.output_dir.mkdir(parents=True, exist_ok=True)
+    args.nextflow_dir = args.output_dir / 'nextflow'
+    if not args.nextflow_dir.exists():
+        args.nextflow_dir.mkdir(parents=True, exist_ok=True)
     # Set default log filepath if none set, otherwise ensure parent of set path does exist
+    args.run_timestamp = '{:%Y%m%d_%H%M%S}'.format(datetime.datetime.now())
     if args.log_fp == None:
-        args.log_fp = args.output_dir / 'pipeline_log.txt'
+        args.log_fp = args.output_dir / f'pipeline_log_{args.run_timestamp}.txt'
         log.setup_log_file(args.log_fp)
     elif not args.log_fp.parent.exists():
         msg = f'--log_fp parent directory does not exist: {args.log_fp.parent}'

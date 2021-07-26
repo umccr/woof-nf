@@ -366,6 +366,10 @@ def prepare_rows(source_data: SourceFiles, columns: List, file_columns_display: 
 
 def write(input_data: Dict, output_fp: pathlib.Path) -> pathlib.Path:
     header_tokens = ('sample_name', 'file_type', 'file_source', 'run_number', 'filepath')
+    # Create directory if required
+    if not output_fp.parent.exists():
+        output_fp.parent.mkdir(mode=0o700)
+    # Write inputs
     with output_fp.open('w') as fh:
         print(*header_tokens, sep='\t', file=fh)
         for source_files in input_data.values():

@@ -45,12 +45,23 @@ class RenderInfo:
         self.splash = True
 
 
-def create_configuration(inputs_fp: pathlib.Path, output_dir: pathlib.Path, docker: bool, executor: str) -> pathlib.Path:
+def create_configuration(
+    inputs_fp: pathlib.Path,
+    output_dir: pathlib.Path,
+    nextflow_run_dir: pathlib.Path,
+    docker: bool,
+    executor: str
+) -> pathlib.Path:
+    # Copy in defaults
+    default_config_src_fp = pathlib.Path(__file__).parent / 'workflow/defaults.config'
+    default_config_fp = nextflow_run_dir / 'defaults.config'
+    shutil.copy(default_config_src_fp, default_config_fp)
     # Get configuration
     config_lines = list()
     config_lines.append('// Inputs and outputs')
     config_lines.append(f'params.inputs_fp = "{inputs_fp}"')
     config_lines.append(f'params.output_dir = "{output_dir}"')
+    config_lines.append(f'params.nextflow_run_dir = "{nextflow_run_dir}"')
     config_lines.append('')
     config_lines.append('// Executor')
     if executor == 'aws':
@@ -70,28 +81,48 @@ def create_configuration(inputs_fp: pathlib.Path, output_dir: pathlib.Path, dock
             assert False
         config_lines.append('docker.enabled = true')
         config_lines.append(f'process.container = "{docker_uri}"')
+    # Include defaults.config
+    config_lines.append(f'includeConfig "{default_config_fp.absolute()}"')
     # Write to disk
-    output_fp = output_dir / 'nextflow.config'
+    output_fp = nextflow_run_dir / 'nextflow.config'
     with output_fp.open('w') as fh:
         print(*config_lines, sep='\n', file=fh)
     return output_fp
 
 
-def run(inputs_fp: pathlib.Path, output_dir: pathlib.Path, resume: bool, docker: bool, executor: str, bucket: str) -> None:
-    # Set workflow configuration
-    config_fp = create_configuration(inputs_fp, output_dir, docker, executor)
-    # Set command line arguments
-    args = list()
-    args.append(f'-c {config_fp}')
+def run(
+    inputs_fp: pathlib.Path,
+    output_dir: pathlib.Path,
+    nextflow_dir: pathlib.Path,
+    run_timestamp: str,
+    resume: bool,
+    docker: bool,
+    executor: str,
+    bucket: str
+) -> None:
+    # Create directory for nextflow logs and reports
+    nextflow_run_dir = nextflow_dir / run_timestamp
+    nextflow_run_dir.mkdir(mode=0o700)
+    # Create workflow config, set log filepath, and set work directory
+    config_fp = create_configuration(inputs_fp, output_dir, nextflow_run_dir, docker, executor)
+    log_fp = nextflow_run_dir / 'nextflow_log.txt'
+    work_dir = nextflow_dir / 'work'
+    # Prepare command and args
+    command_tokens = list()
+    command_tokens.append('nextflow')
+    command_tokens.append(f'-log {log_fp}')
+    command_tokens.append('run')
+    command_tokens.append(f'-config {config_fp}')
+    command_tokens.append(f'-work-dir {work_dir}')
     if resume:
-        args.append('-resume')
+        command_tokens.append('-resume')
     if executor == 'aws':
-        args.append(f'-bucket-dir {bucket}')
-    args_str = ' '.join(args)
-    # Prepare full command
-    log.task_msg_title('Executing workflow')
+        command_tokens.append(f'-bucket-dir {bucket}')
     workflow_fp = pathlib.Path(__file__).parent / 'workflow/pipeline.nf'
-    command = f'{workflow_fp} {args_str}'
+    command_tokens.append(workflow_fp)
+    # Construct full command
+    log.task_msg_title('Executing workflow')
+    command = ' '.join(str(p) for p in command_tokens)
     log.render(log.ftext(f'\nCommand: {command}', f='bold'))
     log.render('\nNextflow output:\n')
     # Start
@@ -220,7 +251,7 @@ def render_output(ri, term_size: os.terminal_size) -> List[int]:
     lines_all.append('\n')
     if ri.errors:
         lines_all.append(
-            'Errors encountered - check .nextflow.log for further information!'
+            'Errors encountered - check nextflow log for further information!'
             ' Further details will be printed at conclusion of workflow run.\n'
         )
         lines_all.append('\n')
