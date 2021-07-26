@@ -8,7 +8,8 @@ process module_smlv_comparison {
   path('*.tsv')
 
   script:
-  publish_dir = "${params.output_dir}/${attributes_in.sample_name}/small_variants/3_comparison/"
+  publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"
+  publish_dir = "${publish_basedir}/${attributes_in.run_type}/small_variants/3_comparison/"
   subset = attributes_in.filtered ? 'filtered' : 'pass'
   fn_suffix = attributes_in.filtered ? '_filtered' : ''
   """

@@ -1,5 +1,5 @@
 process module_smlv_pass {
-  publishDir "${params.output_dir}/${attributes_in.sample_name}/small_variants/1_filtered_vcfs/"
+  publishDir "${publish_dir}"
 
   input:
   tuple val(attributes_in), path(vcf)
@@ -8,6 +8,8 @@ process module_smlv_pass {
   tuple val(attributes_out), path('*.vcf.gz')
 
   script:
+  publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"
+  publish_dir = "${publish_basedir}/${attributes_in.run_type}/small_variants/1_filtered_vcfs/"
   filename = "${attributes_in.data_source}__${attributes_in.run_type}__filtered__${vcf.getSimpleName()}"
   attributes_out = attributes_in.clone()
   attributes_out.indexed = false

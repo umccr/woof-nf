@@ -73,9 +73,10 @@ workflow workflow_small_variants {
     ch_smlv_counts_grouped = ch_smlv_counts
       // As we cannot directly call groupTuple on Attributes, we construct the group key and place at index 0:
       // Format: [sample_name, file]
-      .map { attrs, file -> tuple( groupKey(attrs.sample_name, 0), file ) }
+      .map { attrs, file -> tuple( groupKey([attrs.sample_name, attrs.run_type], 0), file ) }
       // Now we can collect with groupTuple
-      // Format: [sample_name, [files]]
+      // Format: [sample_name, run_type, [files]]
       .groupTuple()
+      .map { group_key, files -> [group_key[0], group_key[1], files] }
     module_smlv_counts_combine(ch_smlv_counts_grouped)
 }
