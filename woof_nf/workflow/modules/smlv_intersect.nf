@@ -10,7 +10,7 @@ process module_smlv_intersect {
   script:
   source = attributes_in.filtered ? 'filtered' : 'input'
   publish_dir_base = "${params.output_dir}/${attributes_in.sample_name}/small_variants/2_variants_intersect/"
-  publish_dir = "${publish_dir_base}/${source}/${attributes_in.file_source}"
+  publish_dir = "${publish_dir_base}/${source}/${attributes_in.data_source}"
   attributes_out = attributes_in.clone()
   attributes_out.indexed = false
   """

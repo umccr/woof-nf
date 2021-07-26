@@ -46,22 +46,22 @@ workflow workflow_small_variants {
     // Create channels for counting
     // Format (ch_smlv_to_count): [attributes, vcf]
     ch_smlv_to_count = Channel.empty().mix(
-       // Update flag position for unpacked VCFs; `flags` variable here always in respect to vcf_one wrt position
+       // Update run_number for unpacked VCFs
       ch_smlv_prepared.flatMap { attributes, vcf_one, index_one, vcf_two, index_two ->
         attrs_one = attributes.clone()
         attrs_two = attributes.clone()
-        attrs_one.position = 'one'
-        attrs_two.position = 'two'
+        attrs_one.run_number = 'one'
+        attrs_two.run_number = 'two'
         return [[attrs_one, vcf_one], [attrs_two, vcf_two]]
       },
       // Set distinct name
-      // Format (out): [attributes, vcf]; Attributes.file_source is modified
+      // Format (out): [attributes, vcf]; Attributes.data_source is modified
       ch_smlv_intersects.flatMap { d ->
         // Format (d): [attributes, [0000.vcf, 0001.vcf, 0002.vcf]]
         // Format (dd): [0000.vcf, 0001.vcf, 0002.vcf]
         d[1].collect { dd ->
           attributes = d[0].clone()
-          attributes.file_source = "${attributes.file_source}__intersect"
+          attributes.data_source = "${attributes.data_source}__intersect"
           [attributes, dd]
         }
       }

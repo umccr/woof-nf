@@ -11,17 +11,20 @@ import java.nio.file.Paths
 // so, we are instead using a hash. Using a function for more explicit definition.
 def create_attributes(
    String sample_name,
-   String variant_type,
-   String file_source,
-   String position,
+   String run_type,
+   String run_number,
+   String data_source,
+   String data_type,
    Boolean filtered,
    Boolean indexed
 ) {
   [
     sample_name: sample_name,
-    variant_type: variant_type,
-    file_source: file_source,
-    position: position,
+    run_type: run_type,
+    run_number: run_number,
+    run_type: run_type,
+    data_source: data_source,
+    data_type: data_type,
     filtered: filtered,
     indexed: indexed
   ]
@@ -35,12 +38,12 @@ def process_inputs(input_files) {
   def inputs_sv = []
   input_files.each { d ->
     // Unpack and cast here; error raises while trying to unpack in closure params
-    (sample_name, variant_type, file_source, run_number, filepath) = d
-    filepath = file(filepath)
+    (sample_name, run_type, run_number, data_source, data_type, filepath) = d
+    def filepath = file(filepath)
     // Restrict some values
     assert run_number in ['one', 'two']
-    assert variant_type in ['copy_number_variants', 'small_variants', 'structural_variants']
-    assert file_source in [
+    assert data_type in ['copy_number_variants', 'small_variants', 'structural_variants']
+    assert data_source in [
       'cpsr',
       'pcgr',
       'manta',
@@ -51,20 +54,21 @@ def process_inputs(input_files) {
       'vardict'
     ]
     // Set attributes
-    attributes = create_attributes(
-     sample_name,   // sample_name
-     variant_type,  // variant_type
-     file_source,   // file_source
-     run_number,    // position
-     false,         // filtered
-     null           // indexed
+    def attributes = create_attributes(
+     sample_name,
+     run_type,
+     run_number,
+     data_source,
+     data_type,
+     false,  // filtered
+     null  // indexed
     )
     // Sort into appropriate list
-    if (attributes.variant_type == 'copy_number_variants') {
+    if (attributes.data_type == 'copy_number_variants') {
       inputs_cnv << [attributes, filepath]
-    } else if (attributes.variant_type == 'small_variants') {
+    } else if (attributes.data_type == 'small_variants') {
       inputs_smlv << [attributes, filepath]
-    } else if (attributes.variant_type == 'structural_variants') {
+    } else if (attributes.data_type == 'structural_variants') {
       inputs_sv << [attributes, filepath]
     }
   }
@@ -119,15 +123,15 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
   // Format: [attributes, vcf_one, index_one, vcf_two, index_two]
   ch_result = ch_vcf_and_indices
     // As we cannot directly call groupTuple on Attributes, we construct the group key and place at index 0:
-    // Format: [[sample_name, file_source], attributes, vcf_one, index_one, vcf_two, index_two]
+    // Format: [[sample_name, data_source], attributes, vcf_one, index_one, vcf_two, index_two]
     .map {
         def attrs = it[0]
         def values = it[1..-1]
-        tuple(groupKey([attrs.sample_name, attrs.file_source], 0), attrs, *values)
+        tuple(groupKey([attrs.sample_name, attrs.data_source], 0), attrs, *values)
     }
     // Now we can collect with groupTuple
     // Format: [
-    //             [sample_name, file_source],
+    //             [sample_name, data_source],
     //             [attributes_one, attributes_two],
     //             [vcf_one, vcf_two],
     //             [index_one, index_two]
@@ -142,7 +146,7 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
       check_attribute_consistency(attributes_list)
       // Use first attribute instance and update
       def attributes = attributes_list[0].clone()
-      attributes.position = null
+      attributes.run_number = null
       return [
         attributes,
         vcfs[index_one],
@@ -171,7 +175,7 @@ def pair_files(ch_files) {
       check_attribute_consistency(attributes_list)
       // Use first attribute instance and update
       attributes = attributes_list[0]
-      attributes.position = null
+      attributes.run_number = null
       return [
         attributes,
         files[index_one],
@@ -184,17 +188,17 @@ def pair_files(ch_files) {
 def get_file_order(attributes_list) {
   def index_one = null
   def index_two = null
-  def position_first = attributes_list[0].position
-  def position_second = attributes_list[1].position
-  if (position_first == 'one') {
-    assert position_second == 'two'
+  def run_number_first = attributes_list[0].run_number
+  def run_number_second = attributes_list[1].run_number
+  if (run_number_first == 'one') {
+    assert run_number_second == 'two'
     index_one = 0
     index_two = 1
-  } else if (position_second == 'one') {
-    assert position_first == 'two'
+  } else if (run_number_second == 'one') {
+    assert run_number_first == 'two'
     index_one = 1
     index_two = 0
-  } else if (position_first == null && position_second == null) {
+  } else if (run_number_first == null && run_number_second == null) {
     // Allow positions to be null but only if they both are
   } else {
     assert false
@@ -203,7 +207,7 @@ def get_file_order(attributes_list) {
 }
 
 def check_attribute_consistency(attributes_list) {
-  attributes_check = ['sample_name', 'variant_type', 'file_source', 'filtered', 'indexed']
+  attributes_check = ['sample_name', 'run_type', 'data_source', 'data_type', 'filtered', 'indexed']
   for (attribute_check in attributes_check) {
     def value_one = attributes_list[0][attribute_check]
     def value_two = attributes_list[1][attribute_check]

@@ -3,16 +3,16 @@ import pathlib
 import re
 
 
-SOURCE = 'bcbio'
+RUN_TYPE = 'bcbio'
 
-INPUTS_LIST = {
+DATA_SOURCES = {
     'ensemble': ['*-germline-ensemble-annotated.vcf.gz'],
     'gatk': ['*-germline-gatk-haplotype-annotated.vcf.gz'],
     'strelka2': ['*-germline-strelka2-annotated.vcf.gz'],
     'vardict': ['*-germline-vardict-annotated.vcf.gz'],
 }
 
-FILE_TYPES = {
+DATA_TYPES = {
     'ensemble': 'small_variants',
     'gatk': 'small_variants',
     'strelka2': 'small_variants',

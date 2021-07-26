@@ -8,7 +8,7 @@ process module_smlv_pass {
   tuple val(attributes_out), path('*.vcf.gz')
 
   script:
-  filename = "${attributes_in.file_source}__${attributes_in.position}__filtered__${vcf.getSimpleName()}"
+  filename = "${attributes_in.data_source}__${attributes_in.run_type}__filtered__${vcf.getSimpleName()}"
   attributes_out = attributes_in.clone()
   attributes_out.indexed = false
   attributes_out.filtered = true

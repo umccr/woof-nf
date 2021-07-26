@@ -2,16 +2,16 @@ import glob
 import pathlib
 
 
-SOURCE = 'umccrise'
+RUN_TYPE = 'umccrise'
 
-INPUTS_LIST = {
+DATA_SOURCES = {
     'cpsr': ['small_variants', '*-germline.predispose_genes.vcf.gz'],
     'pcgr': ['small_variants', '*-somatic-PASS.vcf.gz'],
     'manta': ['structural', '*-manta.vcf.gz'],
     'purple': ['purple', '*.purple.cnv.gene.tsv'],
 }
 
-FILE_TYPES = {
+DATA_TYPES = {
     'cpsr': 'small_variants',
     'pcgr': 'small_variants',
     'manta': 'structural_variants',
