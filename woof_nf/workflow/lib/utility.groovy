@@ -121,8 +121,8 @@ def pair_vcf_and_indices(ch_vcf_and_indices) {
     // As we cannot directly call groupTuple on Attributes, we construct the group key and place at index 0:
     // Format: [[sample_name, file_source], attributes, vcf_one, index_one, vcf_two, index_two]
     .map {
-        attrs = it[0]
-        values = it[1..-1]
+        def attrs = it[0]
+        def values = it[1..-1]
         tuple(groupKey([attrs.sample_name, attrs.file_source], 0), attrs, *values)
     }
     // Now we can collect with groupTuple
