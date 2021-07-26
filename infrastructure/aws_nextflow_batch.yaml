@@ -1,4 +1,15 @@
 Resources:
+  NextflowBatchLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 500
+              VolumeType: gp2
+      LaunchTemplateName: nextflow-launch-template
+
   NextflowSpotFleetTaggingRole:
     Type: AWS::IAM::Role
     Properties:
@@ -61,7 +72,18 @@ Resources:
         DesiredvCpus: 0
         InstanceRole: !GetAtt NextflowBatchInstanceProfile.Arn
         InstanceTypes:
-          - optimal
+          # set of 'optimal' instance types with <=8 vCPUs
+          - c4.2xlarge
+          - c4.large
+          - c4.xlarge
+          - m4.2xlarge
+          - m4.large
+          - m4.xlarge
+          - r4.2xlarge
+          - r4.large
+          - r4.xlarge
+        LaunchTemplate:
+          LaunchTemplateId: !Ref NextflowBatchLaunchTemplate
         MaxvCpus: 64
         MinvCpus: 0
         SecurityGroupIds:
