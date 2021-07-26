@@ -96,14 +96,14 @@ Resources:
         Tags: {
           "Creator": "cdf",
           "Stack": "nextflow",
-          "Owner": "scwatts"
+          "Owner": "swatts"
         }
         Type: SPOT
       State: ENABLED
       Tags: {
         "Creator": "cdf",
         "Stack": "nextflow",
-        "Owner": "scwatts"
+        "Owner": "swatts"
       }
       Type: MANAGED
 
@@ -119,5 +119,5 @@ Resources:
       Tags: {
         "Creator": "cdf",
         "Stack": "nextflow",
-        "Owner": "scwatts"
+        "Owner": "swatts"
       }
