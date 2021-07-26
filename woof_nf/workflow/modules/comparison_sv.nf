@@ -15,7 +15,7 @@ process module_sv_comparison {
   """
   comparison_sv.py \
     --sample_name "${attributes_in.sample_name}" \
-    --file_source "manta" \
+    --file_source "${attributes_in.data_source}" \
     --vcf_1 1.vcf.gz \
     --vcf_2 2.vcf.gz
   """
