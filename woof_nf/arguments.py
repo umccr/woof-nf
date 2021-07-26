@@ -109,4 +109,6 @@ def process_input_directories(run_dir, run):
             log.render('Retrieving S3 path file list, this may take some time')
             s3path.MESSAGE_LOGGED = True
         paths_s3 = s3path.process_paths(paths_s3_info, run)
+    else:
+        paths_s3 = list()
     return [*paths_s3, *paths_local]
