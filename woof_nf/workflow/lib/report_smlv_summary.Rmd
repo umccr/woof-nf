@@ -1,0 +1,198 @@
+## Summary
+```{r smlv_summary_constants}
+# Small variant summary table columns
+# Order and display name
+v.smlv_summary_table_columns <- c(
+  'Sample name'='sample',
+  'Run type'='run_type',
+  'VCF source'='flabel',
+  'Subset'='subset',
+  'Run 1 count'='run1_count',
+  'Run 2 count'='run2_count',
+  'SNP recall'='SNP_Recall',
+  'SNP precision'='SNP_Precision',
+  'INDEL recall'='IND_Recall',
+  'INDEL precision'='IND_Precision',
+  'SNP truth'='SNP_Truth',
+  'SNP TP'='SNP_TP',
+  'SNP FP'='SNP_FP',
+  'SNP FN'='SNP_FN',
+  'INDEL truth'='IND_Truth',
+  'INDEL TP'='IND_TP',
+  'INDEL FP'='IND_FP',
+  'IND FN'='IND_FN'
+)
+# Rounded columns
+v.smlv_summary_table_columns_round <- c(
+  'SNP recall',
+  'SNP precision',
+  'INDEL recall',
+  'INDEL precision'
+)
+# Columns formatted with commas
+v.smlv_summary_table_columns_comma <- c(
+  'Run 1 count',
+  'Run 2 count',
+  'SNP truth',
+  'SNP TP',
+  'SNP FP',
+  'SNP FN',
+  'INDEL truth',
+  'INDEL TP',
+  'INDEL FP',
+  'IND FN'
+)
+# Expected comparison files
+v.comparison_file_types <- list(
+  'umccrise'=c(
+    'pcgr',
+    'pcgr_filtered',
+    'cpsr',
+    'cpsr_filtered'
+  ),
+  'bcbio'=c(
+    'ensemble',
+    'ensemble_filtered',
+    'gatk',
+    'gatk_filtered',
+    'strelka2',
+    'strelka2_filtered',
+    'vardict',
+    'vardict_filtered'
+  )
+)
+```
+
+```{r smlv_summary_functions}
+discover_smlv_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # Variant counts
+  s.count_fp <- s.base_dir / '/small_variants/counts.tsv'
+  d.file_info_counts <- tibble::tibble(
+    sample_name=s.sample_name,
+    run_type=s.run_type,
+    file_type='count',
+    file=s.count_fp,
+    exists=fs::file_exists(s.count_fp)
+  )
+  # Comparison files
+  v.file_info_comparisons <- purrr::map(v.comparison_file_types[[s.run_type]], function(s.file_type) {
+    s.fp <- s.base_dir / 'small_variants/3_comparison' / paste0(s.file_type, '.tsv')
+    tibble::tibble(
+      sample_name=s.sample_name,
+      run_type=s.run_type,
+      file_type=s.file_type,
+      file=s.fp,
+      exists=fs::file_exists(s.fp)
+    )
+  })
+  d.file_info_comparisons <- dplyr::bind_rows(v.file_info_comparisons)
+  # Combine, set whether count info is available, and return
+  d.files <- dplyr::bind_rows(
+    d.file_info_counts,
+    d.file_info_comparisons
+  )
+  d.files$has_counts <- d.files$exists[d.files$file_type=='count'] && any(d.files$exists[d.files$file_type %in% v.comparison_file_types[[s.run_type]]])
+  return(d.files)
+}
+
+get_smlv_summary_data <- function(d.files) {
+  # Process counts data
+  # 1. read in count data
+  # 2. remove intersect VCFS - identified by run == 'n/a'
+  # 3. recode values: source: input -> all; run: one -> run1_count, two -> run2_count
+  # 4. cast to wider format - remove filename col; add `one` and `two` columns
+  s.count_file <- d.files$file[d.files$file_type=='count']
+  d.counts_wide <- readr::read_tsv(s.count_file, col_types=readr::cols()) %>%
+    dplyr::filter(run!='n/a') %>%
+    dplyr::mutate(
+      source=dplyr::recode(source, input='all'),
+      run=dplyr::recode(run, one='run1_count', two='run2_count'),
+    ) %>%
+    tidyr::pivot_wider(names_from=run, id_cols=c(vcf_type, source), values_from=count)
+  
+  # Create small variants table
+  # 1. bind individual comparison tables into one
+  # 2. full join on comparison ~ counts; i.e. add counts to comparison table
+  # 3. add run type
+  # 4. select, order, and rename desired columns
+  # 5. round precision/recall and add commas to other columns
+  s.run_type <- unique(d.files$run_type)
+  d.comparison_files_all <- d.files[d.files$file_type %in% v.comparison_file_types[[s.run_type]], ]
+  v.comparison_files <- d.comparison_files_all$file[d.comparison_files_all$exists]
+  d.smlv_table <- purrr::map(v.comparison_files, readr::read_tsv, col_types=readr::cols()) %>%
+    dplyr::bind_rows() %>%
+    dplyr::left_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
+    dplyr::mutate(run_type=s.run_type) %>%
+    dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(v.smlv_summary_table_columns_round),
+      function(v.col) { format(round(v.col, 4), nsmall=4, scientific=FALSE) })
+    ) %>%
+    dplyr::mutate(dplyr::across(dplyr::all_of(v.smlv_summary_table_columns_comma), scales::comma))
+  return(d.smlv_table)
+}
+
+render_smlv_summary_table <- function(d.smlv_summary_data) {
+  n.table_height <- min(38.75 * nrow(d.smlv_summary_data), 600)
+  d.smlv_summary_data %>%
+    DT::datatable(
+      rownames=FALSE,
+      filter=v.table_filter_options,
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(
+        scroller=TRUE,
+        scrollX=TRUE,
+        scrollY=n.table_height
+      )
+    ) %>%
+    DT::formatStyle(
+      v.smlv_summary_table_columns_round,
+      background=DT::styleColorBar(
+        v.table_cell_fill_range,
+        v.table_cell_fill_colour_green
+      )
+    )
+}
+```
+
+```{r smlv_summary_process}
+# NOTE: we should consider whether we need to subset variants for display
+# NOTE: may be possible to generalise cleanly without too much work
+v.smlv_files <- purrr::map(v.run_dirs, discover_smlv_files)
+v.smlv_files_with_counts <- v.smlv_files %>% purrr::keep(function(d) { any(d$exists) })
+# Process data or create empty tibble
+if (length(v.smlv_files_with_counts) > 0) {
+  # Get and finalise small variant data
+  # 1. bind rows into single table
+  # 2. sort rows by subset
+  d.smlv_summary_data <- purrr::map(v.smlv_files, get_smlv_summary_data) %>%
+    dplyr::bind_rows() %>%
+    dplyr::arrange(Subset)
+} else {
+  d.smlv_summary_data <- dplyr::bind_rows(v.smlv_summary_table_columns)[NULL, ]
+}
+```
+
+```{r smlv_summary_warnings}
+d.smlv_files <- dplyr::bind_rows(v.smlv_files)
+if (nrow(d.smlv_files) >= 1) {
+  d.smlv_files_missing <- d.smlv_files[! d.smlv_files$exists, ]
+  l.smlv_files_missing <- nrow(d.smlv_files_missing) > 0
+} else {
+  l.smlv_files_missing <- FALSE
+}
+
+# NOTE: if we decide to subset variants for display, warning logic will be needed here and then rendered below
+```
+
+```{r smlv_summary_render_warning_files, eval=l.smlv_files_missing, results='asis'}
+render_warning_files(d.smlv_files_missing)
+```
+
+```{r smlv_summary_table}
+# Render
+render_smlv_summary_table(d.smlv_summary_data)
+```

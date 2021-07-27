@@ -203,10 +203,18 @@ get_variant_display_data <- function(d.full, d.subset) {
 ```
 
 ```{r sample_input_directories}
+# Search for run types in given otput directory
 v.run_types <- c('umccrise', 'bcbio')
-
 s.run_types_regex <- stringr::str_c('(?:', stringr::str_flatten(v.run_types, '|'), ')$')
 v.run_dirs <- fs::dir_ls(params$results_directory, regexp=s.run_types_regex, recurse=1, type='directory', perl=TRUE)
+
+# Count run types present
+v.run_type_counts <- v.run_dirs %>%
+  basename() %>%
+  tibble::enframe() %>%
+  group_by(value) %>%
+  summarise(n=n_distinct(name)) %>%
+  tibble::deframe()
 ```
 
 ```{r child='report_overview.Rmd'}

@@ -1,0 +1,208 @@
+## PCGR
+```{r smlv_pcgr_constants}
+# Small variant PCGR table columns
+# Order and display name
+v.smlv_vcf_columns <- c(
+  'Sample name'='sample_name',
+  'Chromosome'='CHROM',
+  'Position'='POS',
+  'PCGR tier'='PCGR_TIER',
+  'PCGR symbol'='PCGR_SYMBOL',
+  'Quality score'='QUAL',
+  'Tumor AF'='TUMOR_AF',
+  'Normal AF'='NORMAL_AF',
+  'Callers'='CALLERS',
+  'SAGE hotspot'='SAGE_HOTSPOT'
+)
+# bcftools isec filenames and call types
+v.files <- c(
+  'fp'= '0000.vcf',
+  'fn'='0001.vcf'
+)
+# PCGR variant type display order and names
+v.pcgr_variant_types <- c(
+  'Tier 1'='TIER_1',
+  'Tier 2'='TIER_2',
+  'Tier 3'='TIER_3',
+  'Tier 4'='TIER_4',
+  'Non-coding'='NONCODING'
+)
+```
+
+```{r smlv_pcgr_functions}
+discover_smlv_pcgr_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
+  v.pcgr_vcfs <- purrr::map(names(v.files), function(s.vcf_type) {
+    s.vcf_filename <- v.files[s.vcf_type]
+    s.vcf_fp <- s.base_dir / 'small_variants/2_variants_intersect/input/pcgr' / s.vcf_filename
+    tibble::tibble(
+      sample_name=s.sample_name,
+      run_type=s.run_type,
+      file_type=s.vcf_type,
+      file=s.vcf_fp,
+      exists=fs::file_exists(s.vcf_fp)
+    )
+  })
+}
+
+get_smlv_pcgr_data <- function(d.file) {
+  # Collect variant data
+  # 1. read in vcf, select data section, and convert to tibble
+  # 2. select specific rows, if they are present (using `values` to delay renaming columns until later)
+  # 3. add column for (1) sample name, and (2) to identify variant as fp or fn
+  # 4. add missing columns
+  d.vcf <- bedr::read.vcf(d.file$file, split.info=TRUE, verbose=FALSE) %>%
+    purrr::pluck('vcf') %>%
+    tibble::as_tibble() %>%
+    dplyr::select(unname(v.smlv_vcf_columns)[v.smlv_vcf_columns %in% colnames(.)]) %>%
+    dplyr::mutate(sample_name=d.file$sample_name, call_errortype=d.file$file_type)
+  # Add any missing columns
+  v.columns_missing <- v.smlv_vcf_columns[! v.smlv_vcf_columns %in% colnames(d.vcf)]
+  v.columns_missing <- v.columns_missing[v.columns_missing!='sample_name']
+  d.vcf[ ,v.columns_missing] <- NA
+  # Rename and order columns
+  d.vcf <- dplyr::select(d.vcf, dplyr::all_of(v.smlv_vcf_columns))
+  # Return NULL if vcf is empty
+  if (nrow(d.vcf)==0) {
+    return(NULL)
+  } else {
+    return(d.vcf)
+  }
+}
+
+tabulate_pcgr_tiers <- function(d.smlv_pcgr_data, s.var) {
+  # Set missing entries
+  v.missing <- v.pcgr_variant_types[! v.pcgr_variant_types %in% unique(d.smlv_pcgr_data$`PCGR tier`)]
+  # Create tabulated counts
+  # 1. group data by PCGR tier and given variable
+  # 2. tally counts
+  # 3. convert from grouped tbl back to ungrouped
+  # 3. cast into wide format
+  d.table_counts <- d.smlv_pcgr_data %>%
+    dplyr::group_by(!!dplyr::sym(s.var), `PCGR tier`) %>%
+    dplyr::count(.drop=FALSE) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_wider(names_from=`PCGR tier`, id_cols=!!dplyr::sym(s.var), values_from=n, values_fill=0)
+  # Complete processing of tabulated data
+  # 1. add missing rows
+  # 2. order and rename with grouping variable in first position and unknown categories at end
+  # 3. add bottom sum margin
+  # 4. set rowwise, and then compute and add right sum margin
+  # 5. convert from rowwise tbl to ungrouped
+  d.table_counts[ ,v.missing] <- 0
+  dplyr::select(d.table_counts, c(!!dplyr::sym(s.var), dplyr::all_of(v.pcgr_variant_types)), dplyr::everything()) %>%
+    dplyr::bind_rows(
+      dplyr::summarise(
+        .,
+        dplyr::across(where(is.numeric), sum),
+        dplyr::across(where(is.character), ~'Total'))
+    ) %>%
+    dplyr::rowwise(.) %>%
+    dplyr::mutate(Total=sum(dplyr::c_across(where(is.numeric)))) %>%
+    dplyr::ungroup()
+}
+
+smlv_pcgr_render_cross_table <- function(d.smlv_pcgr_data, s.variable) {
+  tabulate_pcgr_tiers(d.smlv_pcgr_data, s.variable) %>%
+    knitr::kable() %>%
+    kableExtra::kable_styling(full_width=FALSE, position='left')
+}
+
+smlv_pcgr_render_table <- function(d.smlv_pcgr_data_subset) {
+  n.table_height <- min(38.75 * nrow(d.smlv_pcgr_data_subset), 600)
+  d.smlv_pcgr_data_subset %>%
+    DT::datatable(
+      rownames=FALSE,
+      caption='PCGR FP and FN variants for all samples.',
+      filter=v.table_filter_options,
+      extensions=c('Scroller', 'KeyTable'),
+      options=list(
+        scroller=TRUE,
+        scrollX=TRUE,
+        scrollY=n.table_height
+      )
+    )
+}
+```
+
+```{r smlv_pcgr_process}
+v.smlv_pcgr_files_nested <- purrr::map(v.run_dirs, discover_smlv_pcgr_files)
+# Here I attempt to flatten the sometimes nested list of file info tibbles. We can get either
+# and empty tibble or a list of two tibbles. Not immediately obvious if there is a clean tidyverse
+# approach to this.
+# NOTE: as a side effect of c(), empty tibbles are removed.
+v.smlv_pcgr_files <- NULL
+for (v.set in v.smlv_pcgr_files_nested) {
+  if ('tbl_df' %in% class(v.set)) {
+    v.smlv_pcgr_files <- c(v.smlv_pcgr_files, purrr::flatten(v.set))
+  } else {
+    v.smlv_pcgr_files <- c(v.smlv_pcgr_files, v.set)
+  }
+}
+v.smlv_pcgr_files_exist <- v.smlv_pcgr_files %>% purrr::keep(function(d) { any(d$exists) })
+# Process data or create empty tibble
+if (length(v.smlv_pcgr_files_exist) > 0) {
+  # Get and finalise PCGR data
+  # 1. bind rows into single table
+  # 2. format position column with comma
+  d.smlv_pcgr_data <- purrr::map(v.smlv_pcgr_files_exist, get_smlv_pcgr_data) %>%
+    dplyr::bind_rows() %>%
+    dplyr::mutate(Position=scales::comma(Position, accuracy=1))
+  # Subset top n, ordering by supposed priority
+  d.smlv_pcgr_data_sorted <- d.smlv_pcgr_data %>%
+    dplyr::arrange(desc(`SAGE hotspot`), desc(`PCGR tier`))
+  d.smlv_pcgr_data_subset <- subset_variants(d.smlv_pcgr_data_sorted, v.table_display_max)
+} else {
+  d.smlv_pcgr_data <- d.smlv_pcgr_data_subset <- dplyr::bind_rows(v.smlv_vcf_columns)[NULL, ]
+}
+```
+
+```{r smlv_pcgr_warnings}
+# NOTE: this pattern and the one below could probably be generalised as a fn
+# Missing file warning
+d.smlv_pcgr_files <- dplyr::bind_rows(v.smlv_pcgr_files)
+if (nrow(d.smlv_pcgr_files) >= 1) {
+  d.smlv_pcgr_files_missing <- d.smlv_pcgr_files[! d.smlv_pcgr_files$exists, ]
+  l.smlv_pcgr_files_missing <- nrow(d.smlv_pcgr_files_missing) > 0
+} else {
+  l.smlv_pcgr_files_missing <- FALSE
+}
+
+# Undisplayed variant warning
+if (nrow(d.smlv_pcgr_data_subset) > 0) {
+  # Set flag
+  d.smlv_pcgr_data_displayed <- get_variant_display_data(d.smlv_pcgr_data, d.smlv_pcgr_data_subset)
+  l.undisplayed_smlv_pcgr_variants <- any(d.smlv_pcgr_data_displayed$`Not displayed` > 0)
+} else {
+  l.undisplayed_smlv_pcgr_variants <- FALSE
+}
+```
+
+```{r smlv_pcgr_variants_warning_files, eval=l.smlv_pcgr_files_missing, results='asis'}
+render_warning_files(d.smlv_pcgr_files_missing)
+```
+
+### Variants counts by sample
+```{r smlv_pcgr_table_sample_name}
+smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'Sample name')
+```
+
+### Variants counts by SAGE hotspot
+```{r smlv_pcgr_table_sage}
+smlv_pcgr_render_cross_table(d.smlv_pcgr_data, 'SAGE hotspot')
+```
+
+### Variants
+```{r smlv_pcgr_variants_warning_display, eval=l.undisplayed_smlv_pcgr_variants, results='asis'}
+render_warning_variants(d.smlv_pcgr_data_displayed)
+```
+
+```{r smlv_pcgr_table_all_variants}
+smlv_pcgr_render_table(d.smlv_pcgr_data_subset)
+```
