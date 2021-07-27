@@ -92,21 +92,39 @@ def create_configuration(
 
 def run(
     inputs_fp: pathlib.Path,
+    output_type: str,
     output_dir: pathlib.Path,
+    output_remote_dir: pathlib.Path,
     nextflow_dir: pathlib.Path,
+    work_dir: pathlib.Path,
     run_timestamp: str,
     resume: bool,
     docker: bool,
-    executor: str,
-    bucket: str
+    executor: str
 ) -> None:
+    # Set the actual final output directory.
+    # We allow operation in 'local' and 'remote' mode. For remote mode, files are written to an S3
+    # bucket from AWS Batch instances but execution of Nextflow still requires local configuration
+    # files and logs can also only be written locally. For a (hopefully) simple solution, I have
+    # decided to allow output_dir to have different meanings in remote and local operation modes:
+    #
+    #   * local mode: output_dir refers to the final output directory for file
+    #   * remote mode: output_dir refers to the local directory containing config and logs
+    #
+    # This now only requires us to set the final output directory in remote mode to the requested
+    # S3 path, which is stored in output_remote_dir.
+    if output_type == 'local':
+        output_dir_final = output_dir
+    elif output_type == 's3':
+        output_dir_final = output_remote_dir
+    else:
+        assert False
     # Create directory for nextflow logs and reports
     nextflow_run_dir = nextflow_dir / run_timestamp
     nextflow_run_dir.mkdir(mode=0o700)
     # Create workflow config, set log filepath, and set work directory
-    config_fp = create_configuration(inputs_fp, output_dir, nextflow_run_dir, docker, executor)
+    config_fp = create_configuration(inputs_fp, output_remote_dir, nextflow_run_dir, docker, executor)
     log_fp = nextflow_run_dir / 'nextflow_log.txt'
-    work_dir = nextflow_dir / 'work'
     # Prepare command and args
     command_tokens = list()
     command_tokens.append('nextflow')
@@ -116,8 +134,6 @@ def run(
     command_tokens.append(f'-work-dir {work_dir}')
     if resume:
         command_tokens.append('-resume')
-    if executor == 'aws':
-        command_tokens.append(f'-bucket-dir {bucket}')
     workflow_fp = pathlib.Path(__file__).parent / 'workflow/pipeline.nf'
     command_tokens.append(workflow_fp)
     # Construct full command

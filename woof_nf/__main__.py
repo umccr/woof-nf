@@ -38,15 +38,17 @@ def entry():
     inputs_fp = inputs.write(input_data, args.output_dir / 'nextflow/input_files.tsv')
 
     # Execute pipeline and render report
-    workflow.run(
+    result = workflow.run(
         inputs_fp,
+        args.output_type,
         args.output_dir,
+        args.output_remote_dir,
         args.nextflow_dir,
+        args.work_dir,
         args.run_timestamp,
         args.resume,
         args.docker,
-        args.executor,
-        args.s3_bucket
+        args.executor
     )
     report.render(args.output_dir)
 

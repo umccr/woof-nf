@@ -20,7 +20,6 @@ def prepare_rows(args: argparse.Namespace) -> List[table.Row]:
         ('version', __version__),
         ('executor', args.executor),
         ('docker', yes_green if args.docker else no_black),
-        ('s3_bucket', log.ftext(args.s3_bucket, c='green') if args.s3_bucket else n_a_black),
         ('resume', yes_green if args.resume else no_black),
     )
     rows = list()
