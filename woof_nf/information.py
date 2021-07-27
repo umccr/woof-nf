@@ -19,6 +19,7 @@ def prepare_rows(args: argparse.Namespace) -> List[table.Row]:
     texts = (
         ('version', __version__),
         ('executor', args.executor),
+        ('output type', args.output_type),
         ('docker', yes_green if args.docker else no_black),
         ('resume', yes_green if args.resume else no_black),
     )

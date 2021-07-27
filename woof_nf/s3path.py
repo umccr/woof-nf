@@ -67,6 +67,7 @@ class VirtualPath():
 
 def process_paths(s3_path_info, run):
     virtual_paths = list()
+    log.render_newline()
     for i, d in enumerate(s3_path_info, 1):
         log.render(f'  processing run {run}: path {i}/{len(s3_path_info)}...', end='', flush=True)
         # Get a list of all objects in bucket with given prefix

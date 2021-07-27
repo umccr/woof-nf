@@ -104,7 +104,7 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
             log.render(log.ftext(f'error: {msg}', c='red'))
             sys.exit(1)
     elif args.executor == 'local' and not args.work_dir:
-        args.work_dir = args.nextflow_dir / 'work'
+        args.work_dir = str(args.nextflow_dir / 'work')
 
     if args.work_dir.startswith('s3://') and not args.output_type == 's3':
         msg = 'refusing to use a S3 work directory with local output'
@@ -125,7 +125,7 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
         sys.exit(1)
 
     if args.executor == 'aws' and not args.docker:
-        log.render('info: aws executor requires docker but wasn\'t explicitly set, forcing')
+        log.render('\ninfo: aws executor requires docker but wasn\'t explicitly set, forcing\n')
         args.docker = True
 
     # Create local output directories
