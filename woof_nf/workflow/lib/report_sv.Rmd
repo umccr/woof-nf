@@ -29,9 +29,17 @@ v.sv_summary_table_columns_round <- c(
 
 ```{r sv_summary_functions}
 discover_sv_summary_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
   s.sv_metrics_fp <- s.base_dir / '/structural_variants/eval_metrics.tsv'
   tibble::tibble(
-    sample_name=basename(s.base_dir),
+    sample_name=s.sample_name,
+    run_type=s.run_type,
     file_type='sv_metrics',
     file=s.sv_metrics_fp,
     exists=fs::file_exists(s.sv_metrics_fp)
@@ -79,12 +87,12 @@ render_sv_summary_table <- function(d.sv_summary_data) {
 
 ```{r sv_summary_process}
 # NOTE: may be possible to generalise cleanly without too much work
-v.sv_summary_files <- purrr::map(v.sample_dirs, discover_sv_summary_files)
-v.sv_summary_files_exist <- v.sv_summary_files[sapply(v.sv_summary_files, function(d) { d$exists })]
+v.sv_summary_files <- purrr::map(v.run_dirs, discover_sv_summary_files)
+v.sv_summary_files_exist <- v.sv_summary_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.sv_summary_files_exist) > 0) {
   # Get and finalise SV summary data
-  d.sv_summary_data <- purrr::map(v.sv_summary_files, get_sv_summary_data) %>%
+  d.sv_summary_data <- purrr::map(v.sv_summary_files_exist, get_sv_summary_data) %>%
     dplyr::bind_rows()
 } else {
   d.sv_summary_data <- dplyr::bind_rows(v.sv_summary_table_columns)[NULL, ]
@@ -95,8 +103,12 @@ if (length(v.sv_summary_files_exist) > 0) {
 # NOTE: this pattern could probably be generalised as a fn
 # Missing file warning
 d.sv_summary_files <- dplyr::bind_rows(v.sv_summary_files)
-d.sv_summary_files_missing <- d.sv_summary_files[! d.sv_summary_files$exists, ]
-l.sv_summary_files_missing <- nrow(d.sv_summary_files_missing) > 0
+if (nrow(d.sv_summary_files) >= 1) {
+  d.sv_summary_files_missing <- d.sv_summary_files[! d.sv_summary_files$exists, ]
+  l.sv_summary_files_missing <- nrow(d.sv_summary_files_missing) > 0
+} else {
+  l.sv_summary_files_missing <- FALSE
+}
 ```
 
 ```{r sv_summary_data_warning_files, eval=l.sv_summary_files_missing, results='asis'}
@@ -127,9 +139,16 @@ v.sv_fpfn_table_columns_comma <- c(
 
 ```{r sv_fpfn_functions}
 discover_sv_fpfn_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
   s.sv_fpfn_fp <- paste0(s.base_dir, '/structural_variants/fpfn.tsv')
   tibble::tibble(
-    sample_name=basename(s.base_dir),
+    sample_name=s.sample_name,
     file_type='sv_fpfn',
     file=s.sv_fpfn_fp,
     exists=fs::file_exists(s.sv_fpfn_fp)
@@ -176,12 +195,12 @@ render_sv_fpfn_table <- function(d.sv_fpfn_data) {
 ```{r sv_fpfn_process}
 # NOTE: we should consider whether we need to subset variants for display
 # NOTE: may be possible to generalise cleanly without too much work
-v.sv_fpfn_files <- purrr::map(v.sample_dirs, discover_sv_fpfn_files)
-v.sv_fpfn_files_exist <- v.sv_fpfn_files[sapply(v.sv_fpfn_files, function(d) { d$exists })]
+v.sv_fpfn_files <- purrr::map(v.run_dirs, discover_sv_fpfn_files)
+v.sv_fpfn_files_exist <- v.sv_fpfn_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.sv_fpfn_files_exist) > 0) {
   # Get and finalise SV fpfn data
-  d.sv_fpfn_data <- purrr::map(v.sv_fpfn_files, get_sv_fpfn_data) %>%
+  d.sv_fpfn_data <- purrr::map(v.sv_fpfn_files_exist, get_sv_fpfn_data) %>%
     dplyr::bind_rows()
 } else {
   d.sv_fpfn_data <- dplyr::bind_rows(v.sv_fpfn_table_columns)[NULL, ]
@@ -192,8 +211,12 @@ if (length(v.sv_fpfn_files_exist) > 0) {
 # NOTE: this pattern could probably be generalised as a fn
 # Missing file warning
 d.sv_fpfn_files <- dplyr::bind_rows(v.sv_fpfn_files)
-d.sv_fpfn_files_missing <- d.sv_fpfn_files[! d.sv_fpfn_files$exists, ]
-l.sv_fpfn_files_missing <- nrow(d.sv_fpfn_files_missing) > 0
+if (nrow(d.sv_fpfn_files) >= 1) {
+  d.sv_fpfn_files_missing <- d.sv_fpfn_files[! d.sv_fpfn_files$exists, ]
+  l.sv_fpfn_files_missing <- nrow(d.sv_fpfn_files_missing) > 0
+} else {
+  l.sv_fpfn_files_missing <- FALSE
+}
 ```
 
 ```{r sv_fpfn_data_warning_files, eval=l.sv_fpfn_files_missing, results='asis'}
@@ -207,7 +230,13 @@ render_sv_fpfn_table(d.sv_fpfn_data)
 ## SV circos {.tabset .tabset-pills}
 ```{r sv_circos_functions}
 discover_sv_circos_files <- function(s.base_dir) {
-  s.sample_name <- basename(s.base_dir)
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
   s.sv_circos_fp <- s.base_dir / '/structural_variants/circos/' / paste0('circos_', s.sample_name, '.png')
   tibble::tibble(
     sample_name=s.sample_name,
@@ -245,8 +274,8 @@ render_sv_circos_plots <- function(d.sv_circos_data) {
 ```
 
 ```{r sv_circos_process}
-v.sv_circos_files <- purrr::map(v.sample_dirs, discover_sv_circos_files)
-v.sv_circos_files_exist <- v.sv_circos_files[sapply(v.sv_circos_files, function(d) { d$exists })]
+v.sv_circos_files <- purrr::map(v.run_dirs, discover_sv_circos_files)
+v.sv_circos_files_exist <- v.sv_circos_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.sv_circos_files_exist) > 0) {
   # Get and finalise SV circos data
@@ -263,8 +292,12 @@ if (length(v.sv_circos_files_exist) > 0) {
 # NOTE: this pattern could probably be generalised as a fn
 # Missing file warning
 d.sv_circos_files <- dplyr::bind_rows(v.sv_circos_files)
-d.sv_circos_files_missing <- d.sv_circos_files[! d.sv_circos_files$exists, ]
-l.sv_circos_files_missing <- nrow(d.sv_circos_files_missing) > 0
+if (nrow(d.sv_circos_files) >= 1) {
+  d.sv_circos_files_missing <- d.sv_circos_files[! d.sv_circos_files$exists, ]
+  l.sv_circos_files_missing <- nrow(d.sv_circos_files_missing) > 0
+} else {
+  l.sv_circos_files_missing <- FALSE
+}
 ```
 
 ```{r sv_circos_warning_files, eval=l.sv_circos_files_missing, results='asis'}

@@ -28,9 +28,16 @@ v.cnv_table_columns_colour <- c(
 
 ```{r cnv_summary_functions}
 discover_cnv_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
   s.cnv_fp <- s.base_dir / '/copy_number_variants/cn_diff.tsv'
   tibble::tibble(
-    sample_name=basename(s.base_dir),
+    sample_name=s.sample_name,
     file_type='cnv_diff',
     file=s.cnv_fp,
     exists=fs::file_exists(s.cnv_fp)
@@ -57,7 +64,7 @@ get_cnv_summary_data <- function(d.files, v.umccr_genes) {
       maxcn_1_2=paste0(max_cn.run1, '/', max_cn.run2),
       mincn_diff=round(abs(min_cn.run1 - min_cn.run2), 2),
       maxcn_diff=round(abs(max_cn.run1 - max_cn.run2), 2),
-      in_umccr=ifelse(gene %in% v.umccr_genes, 'Yes', 'No')
+      in_umccr=ifelse(gene %in% v.umccr_genes, 'Yes', 'No') %>% as.character()
     ) %>%
     dplyr::mutate(
       min_diff=dplyr::recode(min_diff, 'TRUE'='Yes', 'FALSE'='No'),
@@ -94,16 +101,15 @@ render_cnv_summary_table <- function(d.cnv_summary_data_subset) {
 
 ```{r cnv_summary_process}
 # NOTE: may be possible to generalise cleanly without too much work
-v.cnv_files <- purrr::map(v.sample_dirs, discover_cnv_files)
-v.cnv_files_exist <- v.cnv_files[sapply(v.cnv_files, function(d) { d$exists })]
+v.cnv_files <- purrr::map(v.run_dirs, discover_cnv_files)
+v.cnv_files_exist <- v.cnv_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.cnv_files_exist) > 0) {
   # Read in some necessary data
   s.umcccr_genes_fp <- system.file('extdata/genes/umccr_cancer_genes.latest.genes', package='woofr')
   v.umccr_genes <- readr::read_lines(s.umcccr_genes_fp)
   # Get and finalise CNV data
-  d.cnv_summary_data <- purrr::map(v.cnv_files, get_cnv_summary_data, v.umccr_genes) %>%
-    purrr::discard(function(d) { nrow(d) == 0 }) %>%
+  d.cnv_summary_data <- purrr::map(v.cnv_files_exist, get_cnv_summary_data, v.umccr_genes) %>%
     dplyr::bind_rows()
   # Subset top n, ordering by supposed priority
   d.cnv_summary_data_sorted <- d.cnv_summary_data %>%
@@ -118,8 +124,12 @@ if (length(v.cnv_files_exist) > 0) {
 # NOTE: this pattern and the one below could probably be generalised as a fn
 # Missing file warning
 d.cnv_files <- dplyr::bind_rows(v.cnv_files)
-d.cnv_files_missing <- d.cnv_files[! d.cnv_files$exists, ]
-l.cnv_files_missing <- nrow(d.cnv_files_missing) > 0
+if (nrow(d.cnv_files) >= 1) {
+  d.cnv_files_missing <- d.cnv_files[! d.cnv_files$exists, ]
+  l.cnv_files_missing <- nrow(d.cnv_files_missing) > 0
+} else {
+  l.cnv_files_missing <- FALSE
+}
 
 # Undisplayed variant warning
 if (nrow(d.cnv_summary_data_subset) > 0) {

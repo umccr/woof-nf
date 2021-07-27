@@ -1,9 +1,11 @@
 # Build information {.tabset .tabset-fade}
 ## Report configuration
 ```{r configuration}
-n.table_height <- min(38.75 * (1 + length(v.sample_dirs)) + 21, 600)
+n.table_height <- min(38.75 * (1 + length(v.run_dirs)) + 21, 600)
 dplyr::tibble(
-  Sample=v.sample_dirs,
+  Sample=fs::path_dir(v.run_dirs) %>% basename(),
+  'Run type'=basename(v.run_dirs),
+  'Full path'=v.run_dirs
 ) %>%
   knitr::kable(format='html') %>%
   kableExtra::kable_styling(full_width=FALSE, position='left') %>%

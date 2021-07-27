@@ -60,12 +60,34 @@ v.table_display_max <- 500
 ```
 
 ```{r shared_functions}
+# Create empty data frame for file info
+create_empty_file_info <- function() {
+  v.colnames <- c('sample_name'='c', 'run_type'='c', 'file_type'='c', 'file'='c', 'exists'='l')
+  # Hack to force column type spec at tibble creation
+  v.data <- purrr::map(names(v.colnames), function(s.colname) {
+    switch(
+      v.colnames[s.colname],
+      'c' = as.character(),
+      'l' = as.logical(),
+      stop('got bad column type value')
+    )
+  })
+  # Create tibble, setting column types and selecting no rows
+  purrr::set_names(v.data, names(v.colnames))  %>%
+    dplyr::bind_rows() %>%
+    dplyr::filter(FALSE)
+}
+
 # Subset to n variants across samples
 subset_variants <- function(d.variants, n.total=15) {
+  # Do not subset if no variants are available
+  if (nrow(d.variants) == 0) {
+    return(d.variants)
+  }
   # Get variant display count for each sample
   v.variant_display_count <- get_variant_display_counts(d.variants %>% dplyr::count(`Sample name`), n.total)
   # Some sanity checks
-  v.sample_names <- unique(d.smlv_pcgr_data$`Sample name`)
+  v.sample_names <- unique(d.variants$`Sample name`)
   all(v.sample_names %in% names(v.variant_display_count))
   length(v.sample_names) == length(v.variant_display_count)
   # Subet and bind results
@@ -181,7 +203,10 @@ get_variant_display_data <- function(d.full, d.subset) {
 ```
 
 ```{r sample_input_directories}
-v.sample_dirs <- fs::dir_ls(params$results_directory, glob='/*', type='directory')
+v.run_types <- c('umccrise', 'bcbio')
+
+s.run_types_regex <- stringr::str_c('(?:', stringr::str_flatten(v.run_types, '|'), ')$')
+v.run_dirs <- fs::dir_ls(params$results_directory, regexp=s.run_types_regex, recurse=1, type='directory', perl=TRUE)
 ```
 
 ```{r child='report_overview.Rmd'}

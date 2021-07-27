@@ -5,7 +5,8 @@
 # Order and display name
 v.smlv_summary_table_columns <- c(
   'Sample name'='sample',
-  'VCF type'='flabel',
+  'Run type'='run_type',
+  'VCF source'='flabel',
   'Subset'='subset',
   'Run 1 count'='run1_count',
   'Run 2 count'='run2_count',
@@ -43,29 +44,46 @@ v.smlv_summary_table_columns_comma <- c(
   'IND FN'
 )
 # Expected comparison files
-v.comparison_file_types <- c(
-  'pcgr',
-  'pcgr_filtered',
-  'cpsr',
-  'cpsr_filtered'
+v.comparison_file_types <- list(
+  'umccrise'=c(
+    'pcgr',
+    'pcgr_filtered',
+    'cpsr',
+    'cpsr_filtered'
+  ),
+  'bcbio'=c(
+    'ensemble',
+    'ensemble_filtered',
+    'gatk',
+    'gatk_filtered',
+    'strelka2',
+    'strelka2_filtered',
+    'vardict',
+    'vardict_filtered'
+  )
 )
 ```
 
 ```{r smlv_summary_functions}
 discover_smlv_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
   # Variant counts
   s.count_fp <- s.base_dir / '/small_variants/counts.tsv'
   d.file_info_counts <- tibble::tibble(
-    sample_name=basename(s.base_dir),
+    sample_name=s.sample_name,
+    run_type=s.run_type,
     file_type='count',
     file=s.count_fp,
     exists=fs::file_exists(s.count_fp)
   )
   # Comparison files
-  v.file_info_comparisons <- purrr::map(v.comparison_file_types, function(s.file_type) {
+  v.file_info_comparisons <- purrr::map(v.comparison_file_types[[s.run_type]], function(s.file_type) {
     s.fp <- s.base_dir / 'small_variants/3_comparison' / paste0(s.file_type, '.tsv')
     tibble::tibble(
-      sample_name=basename(s.base_dir),
+      sample_name=s.sample_name,
+      run_type=s.run_type,
       file_type=s.file_type,
       file=s.fp,
       exists=fs::file_exists(s.fp)
@@ -77,7 +95,7 @@ discover_smlv_files <- function(s.base_dir) {
     d.file_info_counts,
     d.file_info_comparisons
   )
-  d.files$has_counts <- d.files$exists[d.files$file_type=='count'] && any(d.files$exists[d.files$file_type %in% v.comparison_file_types])
+  d.files$has_counts <- d.files$exists[d.files$file_type=='count'] && any(d.files$exists[d.files$file_type %in% v.comparison_file_types[[s.run_type]]])
   return(d.files)
 }
 
@@ -99,13 +117,16 @@ get_smlv_summary_data <- function(d.files) {
   # Create small variants table
   # 1. bind individual comparison tables into one
   # 2. full join on comparison ~ counts; i.e. add counts to comparison table
-  # 3. select, order, and rename desired columns
-  # 4. round precision/recall and add commas to other columns
-  d.comparison_files_all <- d.files[d.files$file_type %in% v.comparison_file_types, ]
+  # 3. add run type
+  # 4. select, order, and rename desired columns
+  # 5. round precision/recall and add commas to other columns
+  s.run_type <- unique(d.files$run_type)
+  d.comparison_files_all <- d.files[d.files$file_type %in% v.comparison_file_types[[s.run_type]], ]
   v.comparison_files <- d.comparison_files_all$file[d.comparison_files_all$exists]
   d.smlv_table <- purrr::map(v.comparison_files, readr::read_tsv, col_types=readr::cols()) %>%
     dplyr::bind_rows() %>%
     dplyr::left_join(d.counts_wide, by=c('flabel'='vcf_type', 'subset'='source')) %>%
+    dplyr::mutate(run_type=s.run_type) %>%
     dplyr::select(dplyr::all_of(v.smlv_summary_table_columns)) %>%
     dplyr::mutate(dplyr::across(
       dplyr::all_of(v.smlv_summary_table_columns_round),
@@ -141,8 +162,8 @@ render_smlv_summary_table <- function(d.smlv_summary_data) {
 ```{r smlv_summary_process}
 # NOTE: we should consider whether we need to subset variants for display
 # NOTE: may be possible to generalise cleanly without too much work
-v.smlv_files <- purrr::map(v.sample_dirs, discover_smlv_files)
-v.smlv_files_with_counts <- v.smlv_files[sapply(v.smlv_files, function(d) { any(d$has_counts) })]
+v.smlv_files <- purrr::map(v.run_dirs, discover_smlv_files)
+v.smlv_files_with_counts <- v.smlv_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.smlv_files_with_counts) > 0) {
   # Get and finalise small variant data
@@ -158,8 +179,12 @@ if (length(v.smlv_files_with_counts) > 0) {
 
 ```{r smlv_summary_warnings}
 d.smlv_files <- dplyr::bind_rows(v.smlv_files)
-d.smlv_files_missing <- d.smlv_files[! d.smlv_files$exists, ]
-l.smlv_files_missing <- nrow(d.smlv_files_missing) > 0
+if (nrow(d.smlv_files) >= 1) {
+  d.smlv_files_missing <- d.smlv_files[! d.smlv_files$exists, ]
+  l.smlv_files_missing <- nrow(d.smlv_files_missing) > 0
+} else {
+  l.smlv_files_missing <- FALSE
+}
 
 # NOTE: if we decide to subset variants for display, warning logic will be needed here and then rendered below
 ```
@@ -206,11 +231,19 @@ v.pcgr_variant_types <- c(
 
 ```{r smlv_pcgr_functions}
 discover_smlv_pcgr_files <- function(s.base_dir) {
+  # Get sample and and run type from dirpath
+  s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
+  s.run_type <- basename(s.base_dir)
+  # NOTE: we do not expect any files for only bcbio
+  if (s.run_type == 'bcbio') {
+    return(create_empty_file_info())
+  }
   v.pcgr_vcfs <- purrr::map(names(v.files), function(s.vcf_type) {
     s.vcf_filename <- v.files[s.vcf_type]
     s.vcf_fp <- s.base_dir / 'small_variants/2_variants_intersect/input/pcgr' / s.vcf_filename
     tibble::tibble(
-      sample_name=basename(s.base_dir),
+      sample_name=s.sample_name,
+      run_type=s.run_type,
       file_type=s.vcf_type,
       file=s.vcf_fp,
       exists=fs::file_exists(s.vcf_fp)
@@ -299,9 +332,20 @@ smlv_pcgr_render_table <- function(d.smlv_pcgr_data_subset) {
 ```
 
 ```{r smlv_pcgr_process}
-v.smlv_pcgr_files <- purrr::map(v.sample_dirs, discover_smlv_pcgr_files) %>%
-  purrr::flatten()
-v.smlv_pcgr_files_exist <- v.smlv_pcgr_files[sapply(v.smlv_pcgr_files, function(d) { d$exists })]
+v.smlv_pcgr_files_nested <- purrr::map(v.run_dirs, discover_smlv_pcgr_files)
+# Here I attempt to flatten the sometimes nested list of file info tibbles. We can get either
+# and empty tibble or a list of two tibbles. Not immediately obvious if there is a clean tidyverse
+# approach to this.
+# NOTE: as a side effect of c(), empty tibbles are removed.
+v.smlv_pcgr_files <- NULL
+for (v.set in v.smlv_pcgr_files_nested) {
+  if ('tbl_df' %in% class(v.set)) {
+    v.smlv_pcgr_files <- c(v.smlv_pcgr_files, purrr::flatten(v.set))
+  } else {
+    v.smlv_pcgr_files <- c(v.smlv_pcgr_files, v.set)
+  }
+}
+v.smlv_pcgr_files_exist <- v.smlv_pcgr_files %>% purrr::keep(function(d) { any(d$exists) })
 # Process data or create empty tibble
 if (length(v.smlv_pcgr_files_exist) > 0) {
   # Get and finalise PCGR data
@@ -317,15 +361,18 @@ if (length(v.smlv_pcgr_files_exist) > 0) {
 } else {
   d.smlv_pcgr_data <- d.smlv_pcgr_data_subset <- dplyr::bind_rows(v.smlv_vcf_columns)[NULL, ]
 }
-
 ```
 
 ```{r smlv_pcgr_warnings}
 # NOTE: this pattern and the one below could probably be generalised as a fn
 # Missing file warning
 d.smlv_pcgr_files <- dplyr::bind_rows(v.smlv_pcgr_files)
-d.smlv_pcgr_files_missing <- d.smlv_pcgr_files[! d.smlv_pcgr_files$exists, ]
-l.smlv_pcgr_files_missing <- nrow(d.smlv_pcgr_files_missing) > 0
+if (nrow(d.smlv_pcgr_files) >= 1) {
+  d.smlv_pcgr_files_missing <- d.smlv_pcgr_files[! d.smlv_pcgr_files$exists, ]
+  l.smlv_pcgr_files_missing <- nrow(d.smlv_pcgr_files_missing) > 0
+} else {
+  l.smlv_pcgr_files_missing <- FALSE
+}
 
 # Undisplayed variant warning
 if (nrow(d.smlv_pcgr_data_subset) > 0) {
