@@ -34,6 +34,13 @@ def entry():
     dependencies.check(args.executor, args.docker)
     if args.executor == 'aws': aws.check_config()
 
+    # Process input paths; create pathlib.Path or s3path.VirtualPath
+    # Performing here after AWS checks, so that S3 requests do not fail
+    log.task_msg_title('Processing input directories')
+    args.run_dir_one = utility.process_input_directories(args.run_dir_one, run='one')
+    args.run_dir_two = utility.process_input_directories(args.run_dir_two, run='two')
+    log.render_newline()
+
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
     inputs_fp = inputs.write(input_data, args.output_dir / 'nextflow/input_files.tsv')

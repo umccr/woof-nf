@@ -1,6 +1,8 @@
+import pathlib
 import re
 
 
+from . import log
 from . import s3path
 
 
@@ -12,6 +14,32 @@ PATH_RE = re.compile(r'(?<!s3:)/+')
 
 def join_paths(*paths):
     return PATH_RE.sub('/', '/'.join(paths))
+
+
+def process_input_directories(run_dir, run):
+    paths_s3_info = list()
+    paths_local = list()
+    for dirpath in run_dir:
+        if dirpath.startswith('s3'):
+            if re_result := s3path.S3_PATH_RE.match(dirpath):
+                paths_s3_info.append({
+                    'bucket': re_result.group(1),
+                    'key': re_result.group(2),
+                })
+            else:
+                assert False
+        else:
+            paths_local.append(pathlib.Path(dirpath))
+    # Process paths
+    # NOTE: this should be done after AWS config check
+    if paths_s3_info:
+        if not s3path.MESSAGE_LOGGED:
+            log.render('Retrieving S3 path file list, this may take some time')
+            s3path.MESSAGE_LOGGED = True
+        paths_s3 = s3path.process_paths(paths_s3_info, run)
+    else:
+        paths_s3 = list()
+    return [*paths_s3, *paths_local]
 
 
 def get_bucket_and_key(full_path):

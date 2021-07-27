@@ -2,16 +2,13 @@ import argparse
 import datetime
 import os
 import pathlib
-import re
 import sys
 import tempfile
 import textwrap
 
 
 from . import log
-from . import s3path
 from . import utility
-
 
 
 def collect() -> argparse.Namespace:
@@ -70,10 +67,6 @@ def collect() -> argparse.Namespace:
 def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     log.task_msg_title('Checking and processing arguments')
     log.render_newline()
-
-    # Cast inputs to pathlib.Path or as s3path.VirtualPath
-    args.run_dir_one = process_input_directories(args.run_dir_one, run='one')
-    args.run_dir_two = process_input_directories(args.run_dir_two, run='two')
 
     # TODO: refuse to run locally with S3 inputs without --force
     #           - must first deal with S3 input path handling...
@@ -150,29 +143,3 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
         sys.exit(1)
     log.setup_log_file(args.log_fp)
     return args
-
-
-def process_input_directories(run_dir, run):
-    paths_s3_info = list()
-    paths_local = list()
-    for dirpath in run_dir:
-        if dirpath.startswith('s3'):
-            if re_result := s3path.S3_PATH_RE.match(dirpath):
-                paths_s3_info.append({
-                    'bucket': re_result.group(1),
-                    'key': re_result.group(2),
-                })
-            else:
-                assert False
-        else:
-            paths_local.append(pathlib.Path(dirpath))
-    # Process paths
-    # NOTE: this should be done after AWS config check
-    if paths_s3_info:
-        if not s3path.MESSAGE_LOGGED:
-            log.render('Retrieving S3 path file list, this may take some time')
-            s3path.MESSAGE_LOGGED = True
-        paths_s3 = s3path.process_paths(paths_s3_info, run)
-    else:
-        paths_s3 = list()
-    return [*paths_s3, *paths_local]
