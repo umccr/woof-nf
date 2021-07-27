@@ -9,6 +9,7 @@ from . import information
 from . import inputs
 from . import log
 from . import report
+from . import utility
 from . import workflow
 
 
@@ -36,9 +37,11 @@ def entry():
     # Get inputs and write to file
     input_data = inputs.collect(args.run_dir_one, args.run_dir_two)
     inputs_fp = inputs.write(input_data, args.output_dir / 'nextflow/input_files.tsv')
+    if args.output_type == 's3':
+        utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
 
     # Execute pipeline and render report
-    result = workflow.run(
+    workflow.run(
         inputs_fp,
         args.output_type,
         args.output_dir,
@@ -50,10 +53,14 @@ def entry():
         args.docker,
         args.executor
     )
+    if args.output_type == 's3':
+        utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
     report.render(args.output_dir)
 
     # Exit message
     log.task_msg_title('Pipeline completed sucessfully! Goodbye')
+    if args.output_type == 's3':
+        utility.upload_log(args.log_fp, args.output_remote_dir)
 
 
 if __name__ == '__main__':

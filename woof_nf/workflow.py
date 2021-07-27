@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 from . import aws
 from . import log
+from . import utility
 
 
 DOCKER_URI_AWS = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
@@ -123,8 +124,10 @@ def run(
     nextflow_run_dir = nextflow_dir / run_timestamp
     nextflow_run_dir.mkdir(mode=0o700)
     # Create workflow config, set log filepath, and set work directory
-    config_fp = create_configuration(inputs_fp, output_remote_dir, nextflow_run_dir, docker, executor)
+    config_fp = create_configuration(inputs_fp, output_dir_final, nextflow_run_dir, docker, executor)
     log_fp = nextflow_run_dir / 'nextflow_log.txt'
+    if output_type == 's3':
+        utility.upload_nextflow_dir(nextflow_dir, output_remote_dir)
     # Prepare command and args
     command_tokens = list()
     command_tokens.append('nextflow')
@@ -158,6 +161,8 @@ def run(
     if errors:
         error_str = ''.join(errors)
         log.render(error_str)
+    if output_type == 's3':
+        utility.upload_config_and_logs(args)
     if p.returncode != 0:
         sys.exit(1)
 

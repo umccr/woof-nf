@@ -10,13 +10,8 @@ import textwrap
 
 from . import log
 from . import s3path
+from . import utility
 
-
-PATH_RE = re.compile(r'(?<!s3:)//')
-
-
-def join_paths(*paths):
-    return PATH_RE.sub('/', '/'.join(paths))
 
 
 def collect() -> argparse.Namespace:
@@ -100,7 +95,7 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     args.nextflow_dir = args.output_dir / 'nextflow'
     if args.executor == 'aws':
         if not args.work_dir:
-            args.work_dir = join_paths(args.output_remote_dir, 'work')
+            args.work_dir = utility.join_paths(args.output_remote_dir, 'nextflow/work')
         elif not args.work_dir.startswith('s3://'):
             msg = textwrap.dedent('''
                 AWS job execution requires S3 work directory, remove --work-dir or manually set
@@ -140,24 +135,20 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
         os.makedirs(args.nextflow_dir, exist_ok=True)
 
     # Set up log file
-    # args.log_fp: always local
-    # args.log_remote_fp: S3 path; only allowed with remote output
     args.run_timestamp = '{:%Y%m%d_%H%M%S}'.format(datetime.datetime.now())
     log_fn = f'pipeline_log_{args.run_timestamp}.txt'
     if not args.log_fp:
         args.log_fp = pathlib.Path(args.output_dir, log_fn)
     elif args.log_fp.startswith('s3://'):
-        if not args.output_type == 's3':
-            msg = 'refusing to write log to S3 when writing output locally'
-            log.render(log.ftext(f'error: {msg}', c='red'))
-            sys.exit(1)
-        args.log_remote_fp = args.log_fp
-        args.log_fp = pathlib.Path(args.output_dir, log_fn)
+        msg = 'custom log directories on S3 are not allowed'
+        log.render(log.ftext(f'error: {msg}', c='red'))
+        sys.exit(1)
 
     if not args.log_fp.parent.exists():
         msg = f'--log_fp parent directory does not exist: {args.log_fp.parent}'
         log.render(log.ftext(f'error: {msg}', c='red'))
         sys.exit(1)
+    log.setup_log_file(args.log_fp)
     return args
 
 
