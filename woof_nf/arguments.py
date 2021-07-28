@@ -84,7 +84,7 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     args.nextflow_dir = args.output_dir / 'nextflow'
     if args.executor == 'aws':
         if not args.work_dir:
-            if args.output_remote_dir:
+            if not args.output_remote_dir:
                 msg = '--work_dir required with local output and AWS executor'
                 log.render(log.ftext(f'error: {msg}', c='red'))
                 sys.exit(1)
