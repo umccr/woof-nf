@@ -5,7 +5,7 @@ process module_smlv_intersect {
   tuple val(attributes_in), path('1.vcf.gz'), path('1.vcf.gz.tbi'), path('2.vcf.gz'), path('2.vcf.gz.tbi')
 
   output:
-  tuple val(attributes_out), path('*.vcf')
+  tuple val(attributes_out), path('*.vcf.gz')
 
   script:
   source = attributes_in.filtered ? 'filtered' : 'input'
@@ -15,8 +15,8 @@ process module_smlv_intersect {
   attributes_out = attributes_in.clone()
   attributes_out.indexed = false
   """
-  bcftools isec 1.vcf.gz 2.vcf.gz -p ./
+  bcftools isec 1.vcf.gz 2.vcf.gz -Oz -p ./
   # Remove unneeded output VCF; NF output globbing doesn't allow exclusion at this level
-  rm 0003.vcf
+  rm 0003.vcf.gz
   """
 }

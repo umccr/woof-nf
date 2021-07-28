@@ -16,8 +16,8 @@ v.smlv_vcf_columns <- c(
 )
 # bcftools isec filenames and call types
 v.files <- c(
-  'fp'= '0000.vcf',
-  'fn'='0001.vcf'
+  'fp'= '0000.vcf.gz',
+  'fn'='0001.vcf.gz'
 )
 # PCGR variant type display order and names
 v.pcgr_variant_types <- c(
