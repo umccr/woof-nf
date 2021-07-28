@@ -33,6 +33,18 @@ class Row:
         self.inset = inset
 
 
+def cell_green(text):
+    return Cell(text, just='c', c='green')
+
+
+def cell_grey(text):
+    return Cell(text, just='c', c='black')
+
+
+def cell_red(text):
+    return Cell(text, just='c', c='red')
+
+
 def set_row_colour(row: Row, colour: str) -> None:
     for cell in row.cells:
         cell.c = colour
@@ -41,10 +53,11 @@ def set_row_colour(row: Row, colour: str) -> None:
 def set_column_sizes(rows: List[Row]) -> None:
     for column_cells in zip(*[row.cells for row in rows]):
         clargest = max(len(log.ANSI_ESCAPE.sub('', c.text)) for c in column_cells)
+        cmin_size = clargest + 1
         # Set to be at least n character in length
         # Otherwise, round up to closest multiple of 4
         for cell in column_cells:
-            cell.csize = max(12, clargest + (4 - clargest % 4))
+            cell.csize = max(12, cmin_size + (4 - cmin_size % 4))
 
 
 def render_row(row: Row) -> List[str]:

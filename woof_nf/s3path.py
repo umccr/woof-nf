@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-import fnmatch
 import pathlib
 import re
 
@@ -34,31 +32,6 @@ class VirtualPath():
         for path in self.paths[self.current_path]:
             yield self.__class__(self.paths, path)
 
-    def glob(self, glob_str):
-        paths_matching = [self.current_path]
-        path_matcher = self.current_path
-        parts = glob_str.split('/')
-        for i, part in enumerate(parts, 1):
-            # Construct next matcher
-            if i == len(parts):
-                path_matcher += part
-            else:
-                path_matcher += f'{part}/'
-            # Collect directory contents and filter non-matches
-            paths_filtered = list()
-            for fp_matching in paths_matching:
-                if not fp_matching.endswith('/'):
-                    continue
-                fp_contents = self.paths[fp_matching]
-                for fp in fp_contents:
-                    if fnmatch.fnmatchcase(fp, path_matcher):
-                        paths_filtered.append(fp)
-                    elif fnmatch.fnmatchcase(fp, f'{path_matcher}/'):
-                        # Allow matching of directories i.e. ignore trailing '/'
-                        paths_filtered.append(fp)
-            paths_matching = paths_filtered
-        return paths_matching
-
     @property
     def name(self):
         # Allows interop with pathlib.Path
@@ -67,16 +40,15 @@ class VirtualPath():
 
 def process_paths(s3_path_info, run):
     virtual_paths = list()
-    log.render_newline()
     for i, d in enumerate(s3_path_info, 1):
-        log.render(f'  processing run {run}: path {i}/{len(s3_path_info)}...', end='', flush=True)
+        log.render(f'  processing run {run}: path {i}/{len(s3_path_info)}...', end='\r', flush=True)
         # Get a list of all objects in bucket with given prefix
         s3_bucket = boto3.resource('s3').Bucket(d['bucket'])
         paths = [f'{d["bucket"]}/{r.key}' for r in s3_bucket.objects.filter(Prefix=d['key'])]
         # Create a virtual file path set
         vpath = create_virtual_paths(paths, d['bucket'], d['key'])
         virtual_paths.append(vpath)
-        log.render(' done', flush=True)
+    log.render(f'  processing run {run}: path {i}/{len(s3_path_info)}... done', flush=True)
     return virtual_paths
 
 

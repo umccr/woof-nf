@@ -1,5 +1,4 @@
 import collections
-import glob
 import pathlib
 import re
 import sys
@@ -10,6 +9,7 @@ from . import inputs_bcbio as bcbio
 from . import inputs_umccrise as umccrise
 from . import log
 from . import table
+from . import utility
 
 
 IGNORE_PATHS_RE = [
@@ -177,7 +177,11 @@ def find_input_directories(input_dirpaths):
             run_type = None
             input_modules = [umccrise, bcbio]
             for input_module in input_modules:
-                if input_module.is_dir_type(dirpath):
+                if is_dir_type(
+                    dirpath,
+                    input_module.DIRECTORY_FINGERPRINT,
+                    input_module.FINGREPRINT_SCORE_THRESHOLD
+                ):
                     run_type = input_module.RUN_TYPE
                     break
             # If directory type detected halt recursion, otherwise add dir contents to iterate
@@ -189,27 +193,40 @@ def find_input_directories(input_dirpaths):
     return detected_dirpaths
 
 
+def is_dir_type(dirpath, directory_fingerprint, threshold):
+    score = 0
+    for regex, value in directory_fingerprint.items():
+        matches = utility.regex_glob(regex, dirpath)
+        if matches:
+            score += value
+    return score >= threshold
+
+
 def process_input_directory(
     dirpath: pathlib.Path,
     run_number: str,
     input_module,
     run_type
 ) -> List:
+    # Iterate files and match using regex
     directory_inputs = list()
-    for data_source, glob_parts in input_module.DATA_SOURCES.items():
-        # Construct full glob expression, iterate matches
-        for filepath in dirpath.glob('/'.join(glob_parts)):
-            # Get sample name and create InputFile instance
-            sample_name = input_module.get_sample_name(dirpath)
-            input_file = InputFile(
-                sample_name,
-                run_type,
-                run_number,
-                filepath,
-                data_source,
-                input_module.DATA_TYPES[data_source]
-            )
-            directory_inputs.append(input_file)
+    for data_source, regex in input_module.DATA_SOURCES.items():
+        # Attempt to match known inputs
+        if filepaths := utility.regex_glob(regex, dirpath, data_source):
+            [filepath] = filepaths
+        else:
+            continue
+        # Get sample name and create InputFile instance
+        sample_name = input_module.get_sample_name(dirpath)
+        input_file = InputFile(
+            sample_name,
+            run_type,
+            run_number,
+            filepath,
+            data_source,
+            input_module.DATA_TYPES[data_source]
+        )
+        directory_inputs.append(input_file)
     return directory_inputs
 
 
@@ -311,10 +328,6 @@ def render_table(file_data):
 
 
 def prepare_rows(run_type_data: SourceFiles, columns: List, file_columns_display: List) -> List[table.Row]:
-    # Define symbols
-    tick_green = table.Cell('✓', just='c', c='green')
-    tick_grey = table.Cell('✓', just='c', c='black')
-    cross = table.Cell('⨯', just='c', c='red')
     # Header
     rows = list()
     file_column_header_cells = [table.Cell(t, just='c') for t in file_columns_display]
@@ -330,7 +343,7 @@ def prepare_rows(run_type_data: SourceFiles, columns: List, file_columns_display
     # Create rows for matched pairs
     for sample_name in sorted(run_type_data.samples_matched):
         # Only have sample appear on first line for matched pairs
-        row_one = [sample_name, table.Cell('1', just='c'), tick_green]
+        row_one = [sample_name, table.Cell('1', just='c'), table.cell_green('✓')]
         row_two = ['', table.Cell('2', just='c'), table.Cell('', just='c')]
         sample_files = run_type_data.file_list[sample_name]
         for data_source in columns:
@@ -338,15 +351,17 @@ def prepare_rows(run_type_data: SourceFiles, columns: List, file_columns_display
             exist_two = data_source  in sample_files and isinstance(sample_files[data_source].file_two, InputFile)
             # Set symbol and symbol colour
             if exist_one and not exist_two:
-                sym_one = tick_grey
-                sym_two = cross
+                sym_one = table.cell_grey('✓')
+                sym_two = table.cell_red('⨯')
             elif not exist_one and exist_two:
-                sym_one = cross
-                sym_two = tick_grey
+                sym_one = table.cell_red('⨯')
+                sym_two = table.cell_grey('✓')
             elif exist_one and exist_two:
-                sym_one = sym_two = tick_green
+                sym_one = table.cell_green('✓')
+                sym_two = table.cell_green('✓')
             elif not exist_one and not exist_two:
-                sym_one = sym_two = cross
+                sym_one = table.cell_red('⨯')
+                sym_two = table.cell_red('⨯')
             row_one.append(sym_one)
             row_two.append(sym_two)
         rows.append(table.Row(row_one))
@@ -360,12 +375,12 @@ def prepare_rows(run_type_data: SourceFiles, columns: List, file_columns_display
         elif sample_name in run_type_data.samples_unmatched_two:
             cell_list.append(table.Cell('2', just='c'))
         # Cross to indicate match status
-        cell_list.append(cross)
+        cell_list.append(table.cell_red('⨯'))
         for file_type in columns:
             if file_type in run_type_data.file_list[sample_name]:
-                cell_list.append(tick_green)
+                cell_list.append(table.cell_green('✓'))
             else:
-                cell_list.append(cross)
+                cell_list.append(table.cell_red('⨯'))
         rows.append(table.Row(cell_list))
     return rows
 

@@ -1,5 +1,8 @@
+import os
 import pathlib
 import re
+import sys
+import textwrap
 
 
 from . import log
@@ -73,3 +76,54 @@ def upload_log(log_fp, output_remote_dir):
     nextflow_remote_dir = join_paths(output_remote_dir, log_fp.name)
     fp_remote = join_paths(key_prefix, log_fp.name)
     boto3.resource('s3').Bucket(bucket_name).upload_file(str(log_fp), fp_remote)
+
+
+def regex_glob(regex, dirpath, data_source=None):
+    matches = [dirpath]
+    matches_new = list()
+    for regex_part in regex.split('/'):
+        while matches:
+            # Only allow files to be matches on final iteration
+            filepath = matches.pop()
+            if not filepath.is_dir():
+                continue
+            for entry in filepath_iterator(filepath):
+                entry_str = get_filepath_str(entry)
+                if re.search(regex_part, entry_str):
+                    matches_new.append(entry)
+        matches = matches_new
+        matches_new = list()
+    if len(matches) > 1:
+        if data_source == 'tumour-ensemble':
+            match_selected = sorted(matches, key=get_filepath_str)[0]
+            msg = textwrap.dedent(f'''
+                warning: got {len(matches)} tumour samples for {dirpath} but we currently only
+                support single tumour samples. Selecting the first sample for comparison:
+                {match_selected}.
+            ''').strip().replace('\n', '')
+            log.render(log.ftext(msg, c='yellow'))
+            log.render_newline()
+            matches = [match_selected]
+        else:
+            log.render(log.ftext(f"error: ambiguous match with '{regex}' in {dirpath}:", c='red'))
+            for match in matches:
+                log.render(log.ftext(f'\t{str(match)}', c='red'))
+            sys.exit(1)
+    return matches
+
+
+def filepath_iterator(filepath):
+    if isinstance(filepath, s3path.VirtualPath):
+        yield from filepath.iterdir()
+    else:
+        yield from os.scandir(filepath)
+
+
+def get_filepath_str(filepath):
+    if isinstance(filepath, s3path.VirtualPath):
+        # s3path.VirtualPath currently distinguishes directories and files by trailing
+        # slash. DirEntry.path will always return string paths without trailing slashes.
+        # For consistent behaviour, we remove VirtualPath trailing slashes.
+        return re.sub('/$', '', str(filepath))
+    else:
+        return filepath.path

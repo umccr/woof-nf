@@ -32,11 +32,14 @@ def entry():
 
     # Check dependencies, and test AWS auth and config if needed
     dependencies.check(args.executor, args.docker)
-    if args.executor == 'aws': aws.check_config()
+    paths_all = [*args.run_dir_one, *args.run_dir_two, str(args.output_dir)]
+    if args.executor == 'aws' or any(p.startswith('s3://') for p in paths_all):
+        aws.check_config()
 
     # Process input paths; create pathlib.Path or s3path.VirtualPath
     # Performing here after AWS checks, so that S3 requests do not fail
     log.task_msg_title('Processing input directories')
+    log.render_newline()
     args.run_dir_one = utility.process_input_directories(args.run_dir_one, run='one')
     args.run_dir_two = utility.process_input_directories(args.run_dir_two, run='two')
     log.render_newline()

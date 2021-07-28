@@ -162,7 +162,7 @@ def run(
         error_str = ''.join(errors)
         log.render(error_str)
     if output_type == 's3':
-        utility.upload_config_and_logs(args)
+        utility.upload_log_and_config(args)
     if p.returncode != 0:
         sys.exit(1)
 
