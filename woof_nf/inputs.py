@@ -214,6 +214,7 @@ def process_input_directory(
         # Attempt to match known inputs
         if filepaths := utility.regex_glob(regex, dirpath, data_source):
             [filepath] = filepaths
+            filepath = utility.get_filepath_str(filepath)
         else:
             continue
         # Get sample name and create InputFile instance
