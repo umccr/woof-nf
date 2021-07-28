@@ -167,7 +167,7 @@ def run(
         error_str = ''.join(errors)
         log.render(error_str)
     if output_type == 's3':
-        utility.upload_log_and_config(args)
+        utility.upload_nextflow_dir(nextflow_dir, output_remote_dir)
     if p.returncode != 0:
         sys.exit(1)
 
