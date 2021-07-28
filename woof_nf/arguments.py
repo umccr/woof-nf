@@ -68,10 +68,6 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     log.task_msg_title('Checking and processing arguments')
     log.render_newline()
 
-    # TODO: refuse to run locally with S3 inputs without --force
-    #           - must first deal with S3 input path handling...
-    #           - once that is clear how it will be dealt with, then implement this
-
     # Set output mode, create local execution directory if we're send output to S3
     # args.output_dir: always local
     # args.output_remote_dir: S3 path for AWS execution
