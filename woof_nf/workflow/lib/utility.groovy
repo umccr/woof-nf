@@ -48,10 +48,11 @@ def process_inputs(input_files) {
       'pcgr',
       'manta',
       'purple',
-      'ensemble',
-      'gatk',
-      'strelka2',
-      'vardict'
+      'tumour-ensemble',
+      'normal-ensemble',
+      'normal-gatk',
+      'normal-strelka2',
+      'normal-vardict'
     ]
     // Set attributes
     def attributes = create_attributes(
