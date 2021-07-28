@@ -18,6 +18,7 @@ DOCKER_URI_HUB = f'docker.io/scwatts/woof-nf:0.1.1'
 
 PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
+RETRY_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] NOTE: Process.+?Execution is retried.+?$')
 BIN_UPLOAD_LINE_RE = re.compile(r'^Uploading local `bin` scripts.+$')
 
 AWS_COMPLETION = [
@@ -35,6 +36,7 @@ class RenderInfo:
         self.executor = str()
         self.processes = dict()
         self.errors = list()
+        self.info = set()
         # Line size and display count
         self.line_sizes = list()
         self.lines_displayed = 0
@@ -44,6 +46,9 @@ class RenderInfo:
         # We prevent re-rendering in case of multiple newlines with this flag
         self.newline_previous = False
         self.splash = True
+        # Extra status flags
+        self.killing_tasks = False
+        self.transfering_files = False
 
 
 def create_configuration(
@@ -204,6 +209,12 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
         elif line.rstrip() == '':
             # AWS nf plugin produces lines containing only spaces, ignore
             pass
+        elif line.startswith('WARN: Killing pending tasks'):
+            ri.killing_tasks = True
+        elif line.startswith('WARN'):
+            ri.info.add(line)
+        elif RETRY_LINE_RE.match(line):
+            ri.transfering_files = True
         else:
             ri.errors.append(f'    {line}')
         # Render when:
@@ -219,6 +230,9 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
             ri.newline_previous = True
             # Disable splash if we have both title and executor
             ri.splash = not (ri.title and ri.executor)
+        # Reset extra status flags
+        ri.killing_tasks = False
+        ri.transfering_files = False
     # Clear output so we can print full and final text
     term_size = shutil.get_terminal_size()
     clear_terminal(term_size, ri.lines_displayed)
@@ -226,7 +240,9 @@ def render_nextflow_lines(p: subprocess.Popen) -> List[str]:
     status = [
         ri.title,
         ri.executor,
-        *ri.processes.values()
+        *ri.processes.values(),
+        '\n',
+        *ri.info,
     ]
     status_str = ''.join(status)
     log.render(status_str, sep='')
@@ -258,8 +274,8 @@ def render_output(ri, term_size: os.terminal_size) -> List[int]:
     lines_all.append(ri.executor)
     lines_all.extend(ri.processes.values())
     # Staging block; nested if statements to pad block with newlines
+    lines_all.append('\n')
     if ri.files_uploading or ri.files_downloading:
-        lines_all.append('\n')
         if ri.files_uploading:
             files_n = len(ri.files_uploading)
             plurality = 'file' if files_n == 1 else 'files'
@@ -269,11 +285,16 @@ def render_output(ri, term_size: os.terminal_size) -> List[int]:
             plurality = 'file' if files_n == 1 else 'files'
             lines_all.append(f'Currently downloading {len(ri.files_downloading)} {plurality} from S3\n')
         lines_all.append('\n')
-    lines_all.append('\n')
-    if ri.errors:
+    if ri.killing_tasks:
+        lines_all.append('Nextflow is killing tasks, please wait\n')
+        lines_all.append('\n')
+    if ri.transfering_files:
+        lines_all.append('Nextflow is transfering files, please wait\n')
+        lines_all.append('\n')
+    if ri.errors or ri.info:
         lines_all.append(
-            'Errors encountered - check nextflow log for further information!'
-            ' Further details will be printed at conclusion of workflow run.\n'
+            'Undisplayed messages - details will be printed at the conclusion of the workflow '
+            'run. Please check the nextflow log for further details.\n'
         )
         lines_all.append('\n')
     # Remove empty lines
