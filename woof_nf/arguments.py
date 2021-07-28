@@ -88,7 +88,12 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     args.nextflow_dir = args.output_dir / 'nextflow'
     if args.executor == 'aws':
         if not args.work_dir:
-            args.work_dir = utility.join_paths(args.output_remote_dir, 'nextflow/work')
+            if args.output_remote_dir:
+                msg = '--work_dir required with local output and AWS executor'
+                log.render(log.ftext(f'error: {msg}', c='red'))
+                sys.exit(1)
+            else:
+                args.work_dir = utility.join_paths(args.output_remote_dir, 'nextflow/work')
         elif not args.work_dir.startswith('s3://'):
             msg = textwrap.dedent('''
                 AWS job execution requires S3 work directory, remove --work-dir or manually set
@@ -99,8 +104,8 @@ def check_and_process(args: argparse.Namespace) -> argparse.Namespace:
     elif args.executor == 'local' and not args.work_dir:
         args.work_dir = str(args.nextflow_dir / 'work')
 
-    if args.work_dir.startswith('s3://') and not args.output_type == 's3':
-        msg = 'refusing to use a S3 work directory with local output'
+    if args.work_dir.startswith('s3://') and not args.output_type == 's3' and not args.force:
+        msg = 'refusing to use a S3 work directory with local output without --force'
         log.render(log.ftext(f'error: {msg}', c='red'))
         sys.exit(1)
 
