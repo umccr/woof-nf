@@ -165,7 +165,6 @@ def find_input_directories(input_dirpaths):
     # Find input directories and input types
     detected_dirpaths = list()
     for input_dirpath in input_dirpaths:
-        # NOTE: we may want to consider limiting recursion into deep directories
         dirpaths = [input_dirpath]
         for dirpath in dirpaths:
             # Skip non-directories and ignorable paths

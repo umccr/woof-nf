@@ -1,3 +1,6 @@
+# See note in inputs_umccrise.py regarding file matching regexes.
+
+
 import re
 
 
