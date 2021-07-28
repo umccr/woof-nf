@@ -2,6 +2,8 @@
 import sys
 
 
+from . import __prog__
+from . import __version__
 from . import arguments
 from . import aws
 from . import dependencies
@@ -13,6 +15,11 @@ from . import workflow
 
 
 def entry():
+    # Output program name and version neatly if requested
+    if set(sys.argv) & {'-v', '--version'}:
+        print(f'{__prog__} {__version__}')
+        sys.exit()
+
     # Print entry
     log.task_msg_title('Starting the woof-nf pipeline')
     log.task_msg_body('Welcome to the UMCCR variant comparison pipeline\n')
