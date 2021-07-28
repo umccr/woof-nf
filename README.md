@@ -171,13 +171,10 @@ Optional requirements:
 * Docker (local Docker execution only)
 
 ## Known Issues
+* for bcbio on a single tumour ensemble VCF is currently compared, even if there are multiple
+* file paths displayed in report are nextflow symlinks, prefer relative paths without workdir prefix
 * report is required to process/compute data; all should be pre-computed only requiring render
-* iterative directory discovery using `s3path` is slow - alternative: first obtain file list to operate on
-* resume is not currently possible when running entirely within Docker
-    - NF work directory option needs to be exposed and set to an non-ephemeral location
-* CLI argument checking is incomplete
 * not all applicable columns are formatted with commas in report
-* report is generated on executing machine i.e. never on AWS
 * CNV diff coord data is not currently displayed in report
 
 ## License
