@@ -9,5 +9,8 @@ workflow workflow_copy_number_variants {
     ch_cnv
   main:
     ch_cnv_prepared = pair_files(ch_cnv)
-    module_cnv_comparison(ch_cnv_prepared)
+    ch_cnv_comparison = module_cnv_comparison(ch_cnv_prepared)
+  emit:
+    ch_cnv_comparison.cn_diff
+    ch_cnv_comparison.cn_diff_coord
 }

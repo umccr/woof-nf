@@ -5,7 +5,7 @@ process module_smlv_counts_combine {
   tuple val(sample_name), val(run_type), path(counts)
 
   output:
-  path('*tsv')
+  path('*tsv'), emit: counts
 
   script:
   publish_basedir = "${params.output_dir}/${sample_name}"

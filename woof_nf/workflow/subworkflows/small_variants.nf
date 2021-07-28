@@ -39,7 +39,7 @@ workflow workflow_small_variants {
 
     // Make SNV comparison
     // Format (module_smlv_comparison: input): [attributes, vcf_0, vcf_1, vcf_2]
-    module_smlv_comparison(
+    ch_smlv_comparison = module_smlv_comparison(
         ch_smlv_intersects.map { it.flatten() }
     )
 
@@ -78,5 +78,8 @@ workflow workflow_small_variants {
       // Format: [sample_name, run_type, [files]]
       .groupTuple()
       .map { group_key, files -> [group_key[0], group_key[1], files] }
-    module_smlv_counts_combine(ch_smlv_counts_grouped)
+    ch_smlv_counts_combined = module_smlv_counts_combine(ch_smlv_counts_grouped)
+  emit:
+    ch_smlv_counts_combined.counts
+    ch_smlv_comparison.comparison
 }

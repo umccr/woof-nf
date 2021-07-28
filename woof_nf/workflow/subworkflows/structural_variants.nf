@@ -9,5 +9,9 @@ workflow workflow_structural_variants {
     ch_sv
   main:
     ch_sv_prepared = pair_files(ch_sv)
-    module_sv_comparison(ch_sv_prepared)
+    ch_sv_comparison = module_sv_comparison(ch_sv_prepared)
+  emit:
+    ch_sv_comparison.circos
+    ch_sv_comparison.metrics
+    ch_sv_comparison.fpfn
 }

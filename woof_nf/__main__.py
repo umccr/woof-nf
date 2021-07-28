@@ -8,7 +8,6 @@ from . import dependencies
 from . import information
 from . import inputs
 from . import log
-from . import report
 from . import utility
 from . import workflow
 
@@ -50,7 +49,7 @@ def entry():
     if args.output_type == 's3':
         utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
 
-    # Execute pipeline and render report
+    # Execute pipeline
     workflow.run(
         inputs_fp,
         args.output_type,
@@ -63,14 +62,11 @@ def entry():
         args.docker,
         args.executor
     )
-    if args.output_type == 's3':
-        utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
-    report.render(args.output_dir)
 
-    # Exit message
+    # Diplay exit message, and upload logs if required
     log.task_msg_title('Pipeline completed sucessfully! Goodbye')
     if args.output_type == 's3':
-        utility.upload_log(args.log_fp, args.output_remote_dir)
+        utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
 
 
 if __name__ == '__main__':
