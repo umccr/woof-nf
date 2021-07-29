@@ -5,9 +5,9 @@ process module_sv_comparison {
   tuple val(attributes_in), path('1.vcf.gz'), path('2.vcf.gz')
 
   output:
-  path('circos/*'), emit: circos
-  path('eval_metrics.tsv'), emit: metrics
-  path('fpfn.tsv'), emit: fpfn
+  path('circos/*')
+  path('eval_metrics.tsv')
+  path('fpfn.tsv')
 
   script:
   publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"

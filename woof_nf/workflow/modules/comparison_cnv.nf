@@ -5,8 +5,8 @@ process module_cnv_comparison {
   tuple val(attributes_in), path('1.tsv'), path('2.tsv')
 
   output:
-  path('cn_diff.tsv'), emit: cn_diff
-  path('cn_diff_coord.tsv'), emit: cn_diff_coord
+  path('cn_diff.tsv')
+  path('cn_diff_coord.tsv')
 
   script:
   publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"

@@ -5,7 +5,7 @@ process module_smlv_comparison {
   tuple val(attributes_in), path(vcf_0), path(vcf_1), path(vcf_2)
 
   output:
-  path('*.tsv'), emit: comparison
+  path('*.tsv')
 
   script:
   publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"
