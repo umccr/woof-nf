@@ -7,8 +7,9 @@ from . import table
 
 
 REGION = 'ap-southeast-2'
+ACCOUNT = '843407916570'
 BATCH_QUEUE = 'nextflow-job-queue'
-ECR_BASE_URI = '843407916570.dkr.ecr.ap-southeast-2.amazonaws.com'
+ECR_BASE_URI = f'{ACCOUNT}.dkr.ecr.ap-southeast-2.amazonaws.com'
 ECR_REPO = 'woof-nf'
 ECR_IMAGE_TAG = '0.2.1'
 

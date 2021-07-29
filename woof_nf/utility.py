@@ -1,6 +1,7 @@
 import os
 import pathlib
 import re
+import subprocess
 import sys
 import textwrap
 
@@ -13,6 +14,22 @@ import boto3
 
 
 PATH_RE = re.compile(r'(?<!s3:)/+')
+
+
+def execute_command(command):
+    p = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        encoding='utf-8'
+    )
+    if p.returncode != 0:
+        log.render(log.ftext(f'error: failed to run command: {command}', c='red'))
+        log.render(log.ftext(f'stdout: {p.stdout}', c='red'))
+        log.render(log.ftext(f'stderr: {p.stderr}', c='red'))
+        sys.exit(1)
+    return p
 
 
 def join_paths(*paths):

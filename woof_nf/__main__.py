@@ -72,10 +72,16 @@ def entry():
     )
     if args.output_type == 's3':
         utility.upload_log_and_config(args.log_fp, args.nextflow_dir, args.output_remote_dir)
-    report.render(args.output_dir)
+    report.render(
+        args.output_dir,
+        args.output_remote_dir,
+        args.output_type,
+        args.work_dir,
+        args.executor
+    )
 
     # Diplay exit message, and upload logs if required
-    log.task_msg_title('Pipeline completed sucessfully! Goodbye')
+    log.task_msg_title('\nPipeline completed sucessfully! Goodbye')
     if args.output_type == 's3':
         utility.upload_log(args.log_fp, args.output_remote_dir)
 
