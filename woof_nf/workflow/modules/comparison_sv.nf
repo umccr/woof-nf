@@ -1,5 +1,5 @@
 process module_sv_comparison {
-  publishDir "${publish_dir}"
+  publishDir "${publish_dir}", mode: "${params.publish_mode}"
 
   input:
   tuple val(attributes_in), path('1.vcf.gz'), path('2.vcf.gz')

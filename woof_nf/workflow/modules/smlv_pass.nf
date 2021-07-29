@@ -1,5 +1,5 @@
 process module_smlv_pass {
-  publishDir "${publish_dir}"
+  publishDir "${publish_dir}", mode: "${params.publish_mode}"
 
   input:
   tuple val(attributes_in), path(vcf)

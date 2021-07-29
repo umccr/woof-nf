@@ -68,6 +68,7 @@ def create_configuration(
     config_lines.append(f'params.inputs_fp = "{inputs_fp}"')
     config_lines.append(f'params.output_dir = "{output_dir}"')
     config_lines.append(f'params.nextflow_run_dir = "{nextflow_run_dir}"')
+    config_lines.append(f'params.publish_mode = "copy"')
     config_lines.append('')
     config_lines.append('// Executor')
     if executor == 'aws':

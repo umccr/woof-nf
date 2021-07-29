@@ -1,5 +1,5 @@
 process module_smlv_counts_combine {
-  publishDir "${publish_dir}"
+  publishDir "${publish_dir}", mode: "${params.publish_mode}"
 
   input:
   tuple val(sample_name), val(run_type), path(counts)

@@ -1,5 +1,5 @@
 process module_index_vcf {
-  publishDir "${publish_dir}", pattern: '*.tbi'
+  publishDir "${publish_dir}", pattern: '*.tbi', mode: "${params.publish_mode}"
 
   input:
   tuple val(attributes_in), path(vcf)

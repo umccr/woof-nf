@@ -1,5 +1,6 @@
 process module_smlv_comparison {
-  publishDir "${publish_dir}", saveAs: { "${attributes_in.data_source}${fn_suffix}.tsv" }
+  publishDir "${publish_dir}", saveAs: { "${attributes_in.data_source}${fn_suffix}.tsv" }, mode: "${params.publish_mode}"
+
 
   input:
   tuple val(attributes_in), path(vcf_0), path(vcf_1), path(vcf_2)

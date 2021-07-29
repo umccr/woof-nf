@@ -1,5 +1,5 @@
 process module_smlv_intersect {
-  publishDir "${publish_dir}"
+  publishDir "${publish_dir}", mode: "${params.publish_mode}"
 
   input:
   tuple val(attributes_in), path('1.vcf.gz'), path('1.vcf.gz.tbi'), path('2.vcf.gz'), path('2.vcf.gz.tbi')
