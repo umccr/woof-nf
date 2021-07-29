@@ -88,7 +88,7 @@ def submit_batch_job(command):
             sys.exit(1)
         elif job_status == 'SUCCEEDED':
             # Rewrite status line, then notify of completion
-            log.render('\n    job completed successfully!')
+            log.render('    job completed successfully!')
             break
         elif job_info.get('stoppedAt'):
             # NOTE: branch unlikely execute; status should already be set as FAILED and caught above
@@ -169,7 +169,7 @@ def render_local(comparison_dir, comparison_remote_dir, output_type):
     output_fp = comparison_dir / 'report.html'
     report_entry_fp = pathlib.Path(__file__).parent / 'workflow/lib/report.Rmd'
     render_command = create_report_render_command(comparison_dir, output_fp, report_entry_fp)
-    utility.execute_command(render_command, dryrun=False)
+    utility.execute_command(render_command)
     # Upload to s3 is required
     if output_type == 's3':
         output_remote_fp = utility.join_path(comparison_remote_dir, 'report.html')
