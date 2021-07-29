@@ -51,14 +51,16 @@ v.comparison_file_types <- list(
     'cpsr_filtered'
   ),
   'bcbio'=c(
-    'ensemble',
-    'ensemble_filtered',
-    'gatk',
-    'gatk_filtered',
-    'strelka2',
-    'strelka2_filtered',
-    'vardict',
-    'vardict_filtered'
+    'normal-ensemble',
+    'normal-ensemble_filtered',
+    'normal-gatk',
+    'normal-gatk_filtered',
+    'normal-strelka2',
+    'normal-strelka2_filtered',
+    'normal-vardict',
+    'normal-vardict_filtered',
+    'tumour-ensemble',
+    'tumour-ensemble_filtered'
   )
 )
 ```
@@ -168,7 +170,7 @@ if (length(v.smlv_files_with_counts) > 0) {
   # Get and finalise small variant data
   # 1. bind rows into single table
   # 2. sort rows by subset
-  d.smlv_summary_data <- purrr::map(v.smlv_files, get_smlv_summary_data) %>%
+  d.smlv_summary_data <- purrr::map(v.smlv_files_with_counts, get_smlv_summary_data) %>%
     dplyr::bind_rows() %>%
     dplyr::arrange(Subset)
 } else {
