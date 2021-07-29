@@ -172,7 +172,7 @@ Optional requirements:
 
 ## Known Issues
 * for bcbio on a single tumour ensemble VCF is currently compared, even if there are multiple
-* file paths displayed in report are nextflow symlinks, prefer relative paths without workdir prefix
+* file paths displayed in report are absolute and may represent paths on Batch instance
 * report is required to process/compute data; all should be pre-computed only requiring render
 * not all applicable columns are formatted with commas in report
 * CNV diff coord data is not currently displayed in report
