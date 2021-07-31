@@ -43,6 +43,9 @@ workflow workflow_small_variants {
         ch_smlv_intersects.map { it.flatten() }
     )
 
+    // NOTE: we aren't not directly using intersect counts calculated below in module_smlv_count;
+    // counts are obtained during report rendering from the VCFs themselves
+
     // Create channels for counting
     // Format (ch_smlv_to_count): [attributes, vcf]
     ch_smlv_to_count = Channel.empty().mix(
@@ -58,10 +61,10 @@ workflow workflow_small_variants {
       // Format (out): [attributes, vcf]; Attributes.data_source is modified
       ch_smlv_intersects.flatMap { d ->
         // Format (d): [attributes, [0000.vcf, 0001.vcf, 0002.vcf]]
-        // Format (dd): [0000.vcf, 0001.vcf, 0002.vcf]
+        // Format (dd): [vcf]
         d[1].collect { dd ->
           attributes = d[0].clone()
-          attributes.data_source = "${attributes.data_source}__intersect"
+          attributes.data_source = "${attributes.data_source}__intersect__${dd.simpleName}"
           [attributes, dd]
         }
       }

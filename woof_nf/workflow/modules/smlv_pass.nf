@@ -10,7 +10,7 @@ process module_smlv_pass {
   script:
   publish_basedir = "${params.output_dir}/${attributes_in.sample_name}"
   publish_dir = "${publish_basedir}/${attributes_in.run_type}/small_variants/1_filtered_vcfs/"
-  filename = "${attributes_in.data_source}__${attributes_in.run_type}__filtered__${vcf.getSimpleName()}"
+  filename = "${attributes_in.data_source}__${attributes_in.run_number}__filtered__${vcf.getSimpleName()}"
   attributes_out = attributes_in.clone()
   attributes_out.indexed = false
   attributes_out.filtered = true

@@ -103,12 +103,12 @@ discover_smlv_files <- function(s.base_dir) {
 get_smlv_summary_data <- function(d.files) {
   # Process counts data
   # 1. read in count data
-  # 2. remove intersect VCFS - identified by run == 'n/a'
+  # 2. remove intersect VCFS - identified by run == 'none'
   # 3. recode values: source: input -> all; run: one -> run1_count, two -> run2_count
   # 4. cast to wider format - remove filename col; add `one` and `two` columns
   s.count_file <- d.files$file[d.files$file_type=='count']
   d.counts_wide <- readr::read_tsv(s.count_file, col_types=readr::cols()) %>%
-    dplyr::filter(run!='n/a') %>%
+    dplyr::filter(run!='none') %>%
     dplyr::mutate(
       source=dplyr::recode(source, input='all'),
       run=dplyr::recode(run, one='run1_count', two='run2_count'),

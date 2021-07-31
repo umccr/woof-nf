@@ -12,7 +12,7 @@ process module_smlv_counts_combine {
   publish_dir = "${publish_basedir}/${run_type}/small_variants/"
   """
   {
-    echo -e 'vcf_type\tfilename\trun\tsource\tcount';
+    echo -e 'vcf_type\trun\tsource\tcount';
     cat ${counts};
   } > counts.tsv
   """
