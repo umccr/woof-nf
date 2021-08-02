@@ -106,6 +106,8 @@ def submit_batch_job(command):
             log.render(f'    job status: {job_status}')
             overwrite_status_line = True
             time.sleep(5)
+        else:
+            assert False
 
 
 def render_aws(comparison_dir, comparison_remote_dir, output_type, work_dir):

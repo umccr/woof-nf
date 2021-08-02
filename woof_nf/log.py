@@ -5,21 +5,21 @@ from typing import Dict, List, Optional, Tuple, Union
 
 
 # Formatting
-BOLD        = '\033[1m'
-DIM         = '\033[2m'
-ITALIC      = '\033[4m'
-UNDERLINE   = '\033[4m'
+BOLD        = '\u001b[1m'
+DIM         = '\u001b[2m'
+ITALIC      = '\u001b[4m'
+UNDERLINE   = '\u001b[4m'
 # Colours
-BLACK       = '\033[90m'
-RED         = '\033[91m'
-GREEN       = '\033[92m'
-YELLOW      = '\033[93m'
-BLUE        = '\033[94m'
-MAGENTA     = '\033[95m'
-CYAN        = '\033[96m'
-WHITE       = '\033[97m'
+BLACK       = '\u001b[90m'
+RED         = '\u001b[91m'
+GREEN       = '\u001b[92m'
+YELLOW      = '\u001b[93m'
+BLUE        = '\u001b[94m'
+MAGENTA     = '\u001b[95m'
+CYAN        = '\u001b[96m'
+WHITE       = '\u001b[97m'
 # Misc
-END         = '\033[0m'
+END         = '\u001b[0m'
 
 
 VERBOSITY = 1

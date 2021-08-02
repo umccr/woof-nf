@@ -134,7 +134,7 @@ smlv_pcgr_render_table <- function(d.smlv_pcgr_data_subset) {
 ```{r smlv_pcgr_process}
 v.smlv_pcgr_files_nested <- purrr::map(v.run_dirs, discover_smlv_pcgr_files)
 # Here I attempt to flatten the sometimes nested list of file info tibbles. We can get either
-# and empty tibble or a list of two tibbles. Not immediately obvious if there is a clean tidyverse
+# an empty tibble or a list of two tibbles. Not immediately obvious if there is a clean tidyverse
 # approach to this.
 # NOTE: as a side effect of c(), empty tibbles are removed.
 v.smlv_pcgr_files <- NULL
