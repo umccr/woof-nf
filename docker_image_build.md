@@ -3,7 +3,7 @@
 ```bash
 # Set build and upload info
 NAME=woof-nf
-VERSION=0.2.2
+VERSION=0.2.3
 URI_LOCAL="${NAME}:${VERSION}"
 # AWS
 AWS_PROVIDER_URL=843407916570.dkr.ecr.ap-southeast-2.amazonaws.com
