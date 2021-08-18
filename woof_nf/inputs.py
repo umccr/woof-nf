@@ -251,14 +251,31 @@ def perform_matching(inputs_one: Dict, inputs_two: Dict) -> SourceFiles:
     # Check grouped files match
     sample_files: Dict[str, Dict[str, FilePair]] = dict()
     for (sample_name, data_type), file_group in file_groups.items():
-        # Set file from run one and run two
+        # Check that we have expected number of files
+        # Strictly requiring that no more than two files match. Since writing
+        # list logic I have learned that bcbio run with multiple tumour/normal
+        # pairs in a single run. I emit a warning about this elsewhere.
         if len(file_group) > 2:
             msg = log.ftext(f'error: matched more than two files for {sample_name}:{data_type}:', c='red')
             log.render(msg)
             for f in file_group:
                 log.render(log.ftext(f'  {f.filepath}', c='red'))
             sys.exit(1)
+        # Require the two matching files to not be from the same run. Cases
+        # where this is violated generally occur when the input directory
+        # contains nested results directories, most often caused by
+        # <umccrise_output_dir>/work/. The ./work/ is ignored when possible but
+        # we rely on users to be mindful about inputs.
+        elif len(file_group) == 2:
+            if len({f.run_number for f in file_group}) == 1:
+                msg_base = f'error: found matching files from the same run in different directories for'
+                msg = log.ftext(f'{msg_base} {sample_name}:{data_type}:', c='red')
+                log.render(msg)
+                for f in file_group:
+                    log.render(log.ftext(f'  run {f.run_number}: {f.filepath}', c='red'))
+                sys.exit(1)
         file_one = file_two = None
+        # Set file from run one and run two
         for i, f in enumerate(file_group):
             if f.run_number == 'one':
                 assert file_one == None
