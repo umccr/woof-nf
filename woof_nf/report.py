@@ -84,11 +84,15 @@ def submit_batch_job(command):
             log.render(log.ftext(f'\nerror: {msg}', c='red'))
             sys.exit(1)
         elif job_status == 'FAILED':
+            log.render('\u001b[F\u001b[0K', end='')
+            log.render(f'    job status: {job_status}')
             msg = f'job {job_id} failed for the given reason: {job_info.get("statusReason")}'
             log.render(log.ftext(f'\nerror: {msg}', c='red'))
             sys.exit(1)
         elif job_status == 'SUCCEEDED':
             # Rewrite status line, then notify of completion
+            log.render('\u001b[F\u001b[0K', end='')
+            log.render(f'    job status: {job_status}')
             log.render('    job completed successfully!')
             break
         elif job_info.get('stoppedAt'):
