@@ -1,9 +1,8 @@
 # Conda package build instructions
 ## Build
 ```bash
-# pdiakumis channel provides r-rock, r-woofr
 conda build \
-  --channel pdiakumis \
+  --channel umccr \
   --channel bioconda \
   --channel conda-forge \
   --channel defaults \

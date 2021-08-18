@@ -33,29 +33,12 @@ Simply create a new Conda environment and install `woof-nf`:
 ```bash
 conda create \
   --prefix $(pwd -P)/conda_env/ \
-  --channel scwatts \
-  --channel pdiakumis \
+  --channel umccr \
   --channel bioconda \
   --channel conda-forge \
   --channel defaults \
   --yes \
   woof-nf
-```
-
-The `circos` Conda package is currently broken. To fix the install run:
-```bash
-# Activate
-conda activate conda_env/
-# Apply fix: GD and libwebp; Statistics::Basic (macOS only)
-if [[ "$(uname)" == "Darwin" ]]; then
-  ln -s ${CONDA_PREFIX}/lib/libwebp.7.dylib ${CONDA_PREFIX}/lib/libwebp.6.dylib
-  conda install -y -c bioconda perl-app-cpanminus
-  cpan Statistics::Basic
-elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-  ln -s ${CONDA_PREFIX}/lib/libwebp.so.7 ${CONDA_PREFIX}/lib/libwebp.so.6
-else
-  echo "error: system appears to be unsupported, got $(uname) but expected Linux or Darwn" >&2
-fi
 ```
 
 ### Requirements for AWS

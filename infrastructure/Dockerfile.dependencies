@@ -24,7 +24,7 @@ RUN \
     unzip && \
   # Clean up
   apt-get clean && \
-  rm -rf /var/lib/apt/
+  rm -rf /var/lib/apt/*
 
 # Install AWS command line tools
 RUN \
@@ -51,16 +51,12 @@ RUN \
   conda install -c conda-forge mamba && \
   # Install dependencies, clean up
   mamba install \
-    --channel scwatts \
-    # Provides r-rock, r-woofr
-    --channel pdiakumis \
+    --channel umccr \
     --channel bioconda \
     --channel conda-forge \
     --channel defaults \
     --yes \
     woof-nf && \
-  # Fix circos install
-  ln -s ${CONDA_PREFIX}/lib/libwebp.so.7 ${CONDA_PREFIX}/lib/libwebp.so.6 && \
   # Clean up
   # Base Conda directory, including /opt/miniconda/pkgs/
   conda clean --all --force-pkgs-dirs --yes && \
