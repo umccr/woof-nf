@@ -3,7 +3,7 @@
 ```bash
 # Set build and upload info
 NAME=woof-nf
-VERSION=0.2.4
+VERSION=0.2.5
 URI_LOCAL="${NAME}:${VERSION}"
 # Docker Hub
 HUB_PROVIDER_URL=docker.io/scwatts

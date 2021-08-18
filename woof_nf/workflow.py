@@ -13,7 +13,7 @@ from . import log
 from . import utility
 
 
-DOCKER_URI_HUB = 'docker.io/scwatts/woof-nf:0.2.4'
+DOCKER_URI_HUB = 'docker.io/scwatts/woof-nf:0.2.5'
 
 PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
