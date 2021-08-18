@@ -33,24 +33,17 @@ RUN \
   ./aws/install --bin-dir /usr/bin && \
   rm -r awscliv2.zip aws/
 
-# Install Miniconda
+# Install Mambdaforge
 RUN \
-  curl 'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh' -o 'miniconda.sh' && \
-  /bin/bash miniconda.sh -b -p /opt/miniconda/ && \
-  rm miniconda.sh
+  curl -L 'https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh' -o 'mambaforge.sh' && \
+  /bin/bash mambaforge.sh -b -p /opt/mambaforge/ && \
+  rm mambaforge.sh
 
-# Prepare Conda environment
-# Execute RUN with /bin/bash; /bin/sh produces error when deactivating Conda env
-SHELL ["/bin/bash", "-c"]
+# Create Conda environment with woof-nf and dependencies
 RUN \
-  # Source Miniconda software
-  . /opt/miniconda/etc/profile.d/conda.sh && \
-  # Create and activate new environment, install mamba
-  conda create -n "${ENV_NAME}" && \
-  conda activate "${ENV_NAME}" && \
-  conda install -c conda-forge mamba && \
-  # Install dependencies, clean up
-  mamba install \
+  eval "$(/opt/mambaforge/bin/conda shell.bash hook)" && \
+  mamba create \
+    --name "${ENV_NAME}" \
     --channel umccr \
     --channel bioconda \
     --channel conda-forge \
@@ -58,13 +51,8 @@ RUN \
     --yes \
     woof-nf && \
   # Clean up
-  # Base Conda directory, including /opt/miniconda/pkgs/
-  conda clean --all --force-pkgs-dirs --yes && \
-  # New Conda env, including /opt/miniconda/envs/${ENV_NAME}/pkgs/
-  /opt/miniconda/envs/${ENV_NAME}/bin/conda clean --all --force-pkgs-dirs --yes
-# Revert RUN execution shell to /bin/sh as good practise
-SHELL ["/bin/sh", "-c"]
+  mamba clean --all --force-pkgs-dirs --yes
 
-# Add Conda env to PATH
-ENV PATH="/opt/miniconda/envs/${ENV_NAME}/bin:/opt/miniconda/bin:${PATH}"
-ENV CONDA_PREFIX="/opt/miniconda/envs/${ENV_NAME}"
+# Add new Conda environment to PATH
+ENV PATH="/opt/mambaforge/envs/${ENV_NAME}/bin:/opt/mambdaforge/bin:${PATH}"
+ENV CONDA_PREFIX="/opt/mambaforge/envs/${ENV_NAME}"
