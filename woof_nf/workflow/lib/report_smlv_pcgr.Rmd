@@ -31,7 +31,7 @@ v.pcgr_variant_types <- c(
 
 ```{r smlv_pcgr_functions}
 discover_smlv_pcgr_files <- function(s.base_dir) {
-  # Get sample and and run type from dirpath
+  # Get sample and run type from dirpath
   s.sample_name <- fs::path_dir(s.base_dir) %>% basename()
   s.run_type <- basename(s.base_dir)
   # NOTE: we do not expect any files for only bcbio
@@ -68,12 +68,7 @@ get_smlv_pcgr_data <- function(d.file) {
   d.vcf[ ,v.columns_missing] <- NA
   # Rename and order columns
   d.vcf <- dplyr::select(d.vcf, dplyr::all_of(v.smlv_vcf_columns))
-  # Return NULL if vcf is empty
-  if (nrow(d.vcf)==0) {
-    return(NULL)
-  } else {
-    return(d.vcf)
-  }
+  return(d.vcf)
 }
 
 tabulate_pcgr_tiers <- function(d.smlv_pcgr_data, s.var) {
