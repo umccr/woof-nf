@@ -11,7 +11,7 @@ ACCOUNT = '843407916570'
 BATCH_QUEUE = 'nextflow-job-queue'
 ECR_BASE_URI = f'{ACCOUNT}.dkr.ecr.ap-southeast-2.amazonaws.com'
 ECR_REPO = 'woof-nf'
-ECR_IMAGE_TAG = '0.2.3'
+ECR_IMAGE_TAG = '0.2.4'
 
 
 def check_config() -> None:

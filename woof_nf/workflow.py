@@ -14,7 +14,7 @@ from . import utility
 
 
 DOCKER_URI_AWS = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
-DOCKER_URI_HUB = f'docker.io/scwatts/woof-nf:0.2.3'
+DOCKER_URI_HUB = f'docker.io/scwatts/woof-nf:0.2.4'
 
 PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')

@@ -12,7 +12,7 @@ conda build \
 ## Upload
 ```bash
 # Find built package filepath from the conda build command above and set
-PACKAGE_FP=/usr/local/Caskroom/miniconda/base/conda-bld/noarch/woof-nf-0.2.3-py_0.tar.bz2
+PACKAGE_FP=/usr/local/Caskroom/miniconda/base/conda-bld/noarch/woof-nf-0.2.4-py_0.tar.bz2
 
 # Login and upload package
 anaconda login
