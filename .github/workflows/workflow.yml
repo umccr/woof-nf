@@ -1,0 +1,47 @@
+name: Pushlish Conda and Docker
+
+on:
+  release:
+    branches: [main]
+    types: [published]
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      # Conda package
+      - name: Conda install
+        run: |
+          curl -L 'https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh' -o 'mambaforge.sh'
+          /bin/bash mambaforge.sh -b -p /opt/mambaforge/
+          /opt/mambaforge/bin/mamba install -y -c conda-forge -c defaults anaconda-client conda-build
+
+      - name: Conda build and push
+        run: |
+          /opt/mambaforge/bin/mamba build -c umccr -c bioconda -c conda-forge -c defaults ${GITHUB_WORKSPACE}/infrastructure/conda/
+          /opt/mambaforge/bin/anaconda -t ${{ secrets.ANACONDA_TOKEN }} upload /opt/mambaforge/conda-bld/noarch/woof-nf*.tar.bz2
+
+      # Docker image
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # The version component of the Docker image tag is set here as ${GITHUB_REF} is not available
+      # in the 'tags' field for the build/push step below
+      - name: Docker metadata
+        id: docker_meta
+        run: echo "::set-output name=tags::scwatts/woof-nf:${GITHUB_REF##*/v}"
+
+      - name: Docker build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: infrastructure/Dockerfile.dependencies
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
