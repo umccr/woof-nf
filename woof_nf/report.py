@@ -1,4 +1,5 @@
 import pathlib
+import re
 import subprocess
 import sys
 import textwrap
@@ -11,6 +12,7 @@ import boto3
 from . import aws
 from . import log
 from . import utility
+from . import workflow
 
 
 def render(
@@ -33,9 +35,8 @@ def render(
 
 def submit_batch_job(command):
     # Construct job definition ARN and set job name
-    version_str = aws.ECR_IMAGE_TAG.replace('.', '-')
-    ecr_base_uri_str = aws.ECR_BASE_URI.replace('.', '-')
-    job_definition_arn = f'nf-{ecr_base_uri_str}-{aws.ECR_REPO}-{version_str}'
+    job_definition_base = re.sub('[./:]', '-', workflow.DOCKER_URI_HUB)
+    job_definition_arn = f'nf-{job_definition_base}'
     job_name = 'woof-report-creation'
     # Check job definition exists
     client = boto3.client('batch')

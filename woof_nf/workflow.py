@@ -13,8 +13,7 @@ from . import log
 from . import utility
 
 
-DOCKER_URI_AWS = f'{aws.ECR_BASE_URI}/{aws.ECR_REPO}:{aws.ECR_IMAGE_TAG}'
-DOCKER_URI_HUB = f'docker.io/scwatts/woof-nf:0.2.4'
+DOCKER_URI_HUB = 'docker.io/scwatts/woof-nf:0.2.4'
 
 PROCESS_LINE_RE = re.compile(r'^\[[ -/0-9a-z]+\] process > (\S+).+?$')
 STAGING_LINE_RE = re.compile(r'^Staging foreign file: (.+)$')
@@ -80,14 +79,8 @@ def create_configuration(
     else:
         assert False
     if docker:
-        if executor == 'aws':
-            docker_uri = DOCKER_URI_AWS
-        elif executor == 'local':
-            docker_uri = DOCKER_URI_HUB
-        else:
-            assert False
         config_lines.append('docker.enabled = true')
-        config_lines.append(f'process.container = "{docker_uri}"')
+        config_lines.append(f'process.container = "{DOCKER_URI_HUB}"')
     # Include defaults.config
     config_lines.append(f'includeConfig "{default_config_fp.absolute()}"')
     # Write to disk
