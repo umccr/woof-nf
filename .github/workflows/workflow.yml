@@ -1,4 +1,4 @@
-name: Pushlish Conda and Docker
+name: Publish Conda and Docker
 
 on:
   release:
