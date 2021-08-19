@@ -14,6 +14,19 @@ v.smlv_vcf_columns <- c(
   'Callers'='CALLERS',
   'SAGE hotspot'='SAGE_HOTSPOT'
 )
+# Column types
+v.smlv_vcf_column_types <- c(
+  'Sample name'='c',
+  'Chromosome'='c',
+  'Position'='i',
+  'PCGR tier'='c',
+  'PCGR symbol'='c',
+  'Quality score'='d',
+  'Tumor AF'='d',
+  'Normal AF'='d',
+  'Callers'='c',
+  'SAGE hotspot'='c'
+)
 # bcftools isec filenames and call types
 v.files <- c(
   'fp'= '0000.vcf.gz',
@@ -144,9 +157,11 @@ v.smlv_pcgr_files_exist <- v.smlv_pcgr_files %>% purrr::keep(function(d) { any(d
 # Process data or create empty tibble
 if (length(v.smlv_pcgr_files_exist) > 0) {
   # Get and finalise PCGR data
-  # 1. bind rows into single table
-  # 2. format position column with comma
+  # 1. cast column types - empty tibbles use the default coltype, which triggers in bind_rows
+  # 2. bind rows into single table
+  # 3. format position column with comma
   d.smlv_pcgr_data <- purrr::map(v.smlv_pcgr_files_exist, get_smlv_pcgr_data) %>%
+    purrr::map(cast_tibble_coltypes, v.smlv_vcf_column_types) %>%
     dplyr::bind_rows() %>%
     dplyr::mutate(Position=scales::comma(Position, accuracy=1))
   # Subset top n, ordering by supposed priority

@@ -64,18 +64,31 @@ v.table_display_max <- 500
 create_empty_file_info <- function() {
   v.colnames <- c('sample_name'='c', 'run_type'='c', 'file_type'='c', 'file'='c', 'exists'='l')
   # Hack to force column type spec at tibble creation
-  v.data <- purrr::map(names(v.colnames), function(s.colname) {
-    switch(
-      v.colnames[s.colname],
-      'c' = as.character(),
-      'l' = as.logical(),
-      stop('got bad column type value')
-    )
-  })
+  v.data <- purrr::map(v.colnames, function(s.coltype) { get_coltype(s.coltype)() })
   # Create tibble, setting column types and selecting no rows
   purrr::set_names(v.data, names(v.colnames))  %>%
     dplyr::bind_rows() %>%
     dplyr::filter(FALSE)
+}
+
+# Helper function to cast tibble columns to specific type
+cast_tibble_coltypes <- function(d, v.coltypes) {
+  for (s.colname in names(v.coltypes)) {
+    f.type <- get_coltype(v.coltypes[[s.colname]])
+    d[[s.colname]] <- f.type(d[[s.colname]])
+  }
+  return(d)
+}
+
+get_coltype <- function(s.ct) {
+  switch(
+    s.ct,
+    'c' = as.character,
+    'i' = as.integer,
+    'd' = as.integer,
+    'l' = as.logical,
+    stop('got bad column type value')
+  )
 }
 
 # Subset to n variants across samples
