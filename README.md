@@ -2,7 +2,7 @@
 &nbsp;
 &nbsp;
 <p align="center">
-🚧🚨 <em>Incomplete - Under development</em> 🚨🚧
+🚧🚨 <em>Under development</em> 🚨🚧
 </p>
 
 # woof-nf
@@ -64,27 +64,27 @@ Execute and run jobs locally:
   --output_dir output/
 ```
 
-Execute locally, run jobs on AWS (`--s3_bucket` specifies bucket and directory for intermediate result files):
+Execute locally, run jobs on AWS:
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one data/first_set/ \
   --run_dir_two data/second_set/ \
-  --output_dir output/ \
-  --executor aws \
-  --s3_bucket s3://bucket-name/object-key/
+  --output_dir s3://bucket-name/output/ \
+  --executor aws
 ```
 
-Execute locally, run jobs on AWS with S3 inputs (inputs staged directly from S3 to appropriate AWS instance during job execution):
+Execute locally, run jobs on AWS with S3 inputs and outputs:
 ```bash
 ./woof_nf-runner.py \
   --run_dir_one s3://bucket-name/first_set/ \
   --run_dir_two s3://bucket-name/second_set/ \
-  --output_dir output/ \
-  --executor aws \
-  --s3_bucket s3://bucket-name/temp/
+  --output_dir s3://bucket-name/output/ \
+  --executor aws
 ```
+> When running jobs on AWS with an S3 output directory, a local directory will be created to store configuration and log
+> files. The directory is uniquely named as `nf_[0-9a-z]{8}` and can deleted after the successful completion of the pipeline.
 
-Note that AWS configuration is currently hard coded in `woof_nf/aws.py`.
+> AWS configuration is currently hard coded in `woof_nf/aws.py`.
 
 ## Outputs
 The `woof-nf` output directory contains:
